@@ -51,7 +51,11 @@ public class ContextListener implements ServletContextListener {
 
         //TODO use interface for NeoServer, create NeoServer without dependency to jetty
         final NeoServer server = new NeoServer(new StartupHealthCheck(), new File(serverConfig), null);
-        server.start();
+        try {
+            server.start();
+        } catch (NoClassDefFoundError ignored) {
+            // expected here!
+        }
         return server;
     }
 

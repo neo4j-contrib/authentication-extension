@@ -25,6 +25,12 @@
       <groupId>org.neo4j.app</groupId>
       <artifactId>neo4j-server</artifactId>
       <version>0.6-SNAPSHOT</version>
+      <exclusions>
+        <exclusion>
+          <groupId>org.mortbay.jetty</groupId>
+          <artifactId>jetty</artifactId>
+        </exclusion>
+      </exclusions>
     </dependency>
   </dependencies>
 </project>
