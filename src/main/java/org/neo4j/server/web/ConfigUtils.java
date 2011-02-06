@@ -20,6 +20,8 @@
 package org.neo4j.server.web;
 
 import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.PropertyFileConfigurator;
+import org.neo4j.server.logging.Logger;
 
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletContext;
@@ -34,18 +36,23 @@ import static org.neo4j.server.configuration.Configurator.NEO_SERVER_CONFIG_FILE
  * @since 23.01.11
  */
 public class ConfigUtils {
+    public static final Logger LOG = Logger.getLogger(ConfigUtils.class);
 
     //TODO move
     public static final String NEO_SERVER_BASE_KEY = "org.neo4j.server.base";
     public static final String NEO_SERVER_AUTH_USER_KEY = "org.neo4j.server.auth.user";
     public static final String NEO_SERVER_AUTH_PASS_KEY = "org.neo4j.server.auth.pass";
 
-    public static Configurator getConfigurator(FilterConfig config) {
-        final ServletContext servletContext = config.getServletContext();
-        return new Configurator(new File(locateAppConfig(servletContext)));
+    public static Configurator getConfigurator(final ServletContext servletContext) {
+
+        final String serverConfigFile = locateAppConfig(servletContext);
+        if (serverConfigFile != null)
+            return new PropertyFileConfigurator(new File(serverConfigFile));
+
+        return new JNDIConfigurator();
     }
 
-    public static String locateAppConfig(ServletContext servletContext) {
+    private static String locateAppConfig(final ServletContext servletContext) {
         String contextPath = servletContext.getContextPath();
         if (contextPath.startsWith("/")) {
             contextPath = contextPath.substring(1);
@@ -58,7 +65,8 @@ public class ConfigUtils {
         final String serverBase = getProperty(NEO_SERVER_BASE_KEY);
 
         if (serverBase == null) {
-            throw new RuntimeException(format("property %s not set!", NEO_SERVER_BASE_KEY));
+            LOG.warn(format("property %s not set!", NEO_SERVER_BASE_KEY));
+            return null;
         }
 
         final String defaultConfigFile = serverBase + File.separator + contextPath + File.separator +

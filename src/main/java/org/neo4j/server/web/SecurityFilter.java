@@ -40,7 +40,7 @@ public class SecurityFilter implements Filter {
     private String pass;
 
     public void init(FilterConfig config) throws ServletException {
-    final    Configurator configurator = ConfigUtils.getConfigurator(config);
+        final Configurator configurator= (Configurator) config.getServletContext().getAttribute(ContextListener.CONFIGURATOR_KEY);
 
         name = configurator.configuration().getString(NEO_SERVER_AUTH_USER_KEY);
         pass = configurator.configuration().getString(NEO_SERVER_AUTH_PASS_KEY);

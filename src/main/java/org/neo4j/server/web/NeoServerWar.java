@@ -23,8 +23,6 @@ import org.apache.commons.configuration.Configuration;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.RoundRobinJobScheduler;
 import org.neo4j.server.configuration.Configurator;
-import org.neo4j.server.configuration.validation.DatabaseLocationMustBeSpecifiedRule;
-import org.neo4j.server.configuration.validation.Validator;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.database.DatabaseMode;
 import org.neo4j.server.logging.Logger;
@@ -50,20 +48,16 @@ public class NeoServerWar implements NeoServer {
 
     public static final Logger log = Logger.getLogger(NeoServerWar.class);
 
-
-    private final File configFile;
-    private Configurator configurator;
-    private Database database;
+    private final Configurator configurator;
     private final StartupHealthCheck startupHealthCheck;
-
     private final RoundRobinJobScheduler jobScheduler = new RoundRobinJobScheduler();
-
+    private Database database;
     private OSGiContainer osgiContainer;
     private PluginManager extensions;
 
-    public NeoServerWar(StartupHealthCheck startupHealthCheck, File configFile) {
+    public NeoServerWar(StartupHealthCheck startupHealthCheck, Configurator configurator) {
         this.startupHealthCheck = startupHealthCheck;
-        this.configFile = configFile;
+        this.configurator = configurator;
     }
 
     @Override public Database getDatabase() {
@@ -77,7 +71,6 @@ public class NeoServerWar implements NeoServer {
 
     @Override public void start() {
         startupHealthCheck();
-        validateConfiguration();
         startDatabase();
         try {
             startRoundRobinDB();
@@ -159,7 +152,4 @@ public class NeoServerWar implements NeoServer {
         }
     }
 
-    private void validateConfiguration() {
-        this.configurator = new Configurator(new Validator(new DatabaseLocationMustBeSpecifiedRule()), configFile);
-    }
 }

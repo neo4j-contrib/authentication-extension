@@ -21,13 +21,14 @@
 package org.neo4j.server.web;
 
 import org.neo4j.server.NeoServer;
+import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.logging.Logger;
 import org.neo4j.server.startup.healthcheck.StartupHealthCheck;
 
 import javax.servlet.ServletContext;
 import javax.servlet.ServletContextEvent;
 import javax.servlet.ServletContextListener;
-import java.io.File;
 
 /**
  * @author tbaum
@@ -36,33 +37,31 @@ import java.io.File;
 public class ContextListener implements ServletContextListener {
 
     public static final Logger LOG = Logger.getLogger(ContextListener.class);
-    public static final String CONTEXT_NAME = NeoServer.class.getName();
+    public static final String SERVER_KEY = NeoServer.class.getName();
+    public static final String CONFIGURATOR_KEY = PropertyFileConfigurator.class.getName();
 
     @Override
     public void contextInitialized(ServletContextEvent servletContextEvent) {
         final ServletContext servletContext = servletContextEvent.getServletContext();
-        final NeoServer server = createServer(servletContext);
-        servletContext.setAttribute(CONTEXT_NAME, server);
-    }
 
-    private NeoServer createServer(ServletContext servletContext) {
-        final String serverConfig = ConfigUtils.locateAppConfig(servletContext);
-        LOG.info("using server-config-file %s", serverConfig);
+        final Configurator configurator = ConfigUtils.getConfigurator(servletContext);
+        servletContext.setAttribute(CONFIGURATOR_KEY, configurator);
 
-        final NeoServer server = new NeoServerWar(new StartupHealthCheck(), new File(serverConfig));
+        final NeoServer server = new NeoServerWar(new StartupHealthCheck(), configurator);
         server.start();
 
-        return server;
+        servletContext.setAttribute(SERVER_KEY, server);
     }
 
     @Override
     public void contextDestroyed(ServletContextEvent servletContextEvent) {
         final ServletContext servletContext = servletContextEvent.getServletContext();
-        final Object server = servletContext.getAttribute(CONTEXT_NAME);
+        final Object server = servletContext.getAttribute(SERVER_KEY);
         if (server instanceof NeoServer) {
             ((NeoServer) server).stop();
         }
 
-        servletContext.removeAttribute(CONTEXT_NAME);
+        servletContext.removeAttribute(SERVER_KEY);
+        servletContext.removeAttribute(CONFIGURATOR_KEY);
     }
 }

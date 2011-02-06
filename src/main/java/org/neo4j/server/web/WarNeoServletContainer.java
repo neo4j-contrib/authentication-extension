@@ -49,7 +49,7 @@ public class WarNeoServletContainer extends ServletContainer {
     @Override
     public void init(ServletConfig config) throws ServletException {
         final ServletContext servletContext = config.getServletContext();
-        final Object server = servletContext.getAttribute(ContextListener.CONTEXT_NAME);
+        final Object server = servletContext.getAttribute(ContextListener.SERVER_KEY);
         if (server instanceof NeoServer) {
             this.server = ((NeoServer) server);
         } else {
