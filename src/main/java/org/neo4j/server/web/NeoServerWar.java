@@ -26,12 +26,10 @@ import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.database.DatabaseMode;
 import org.neo4j.server.logging.Logger;
-import org.neo4j.server.osgi.OSGiContainer;
 import org.neo4j.server.plugins.PluginManager;
 import org.neo4j.server.rrd.RrdFactory;
 import org.neo4j.server.startup.healthcheck.StartupHealthCheck;
 import org.neo4j.server.startup.healthcheck.StartupHealthCheckFailedException;
-import org.osgi.framework.BundleException;
 import org.rrd4j.core.RrdDb;
 
 import javax.management.MalformedObjectNameException;
@@ -52,7 +50,7 @@ public class NeoServerWar implements NeoServer {
     private final StartupHealthCheck startupHealthCheck;
     private final RoundRobinJobScheduler jobScheduler = new RoundRobinJobScheduler();
     private Database database;
-    private OSGiContainer osgiContainer;
+//    private OSGiContainer osgiContainer;
     private PluginManager extensions;
 
     public NeoServerWar(StartupHealthCheck startupHealthCheck, Configurator configurator) {
@@ -62,6 +60,11 @@ public class NeoServerWar implements NeoServer {
 
     @Override public Database getDatabase() {
         return database;
+    }
+
+    @Override
+    public Configurator getConfigurator() {
+        return configurator;
     }
 
     @Override public PluginManager getExtensionManager() {
@@ -74,7 +77,7 @@ public class NeoServerWar implements NeoServer {
         startDatabase();
         try {
             startRoundRobinDB();
-            startOsgiContainer();
+//            startOsgiContainer();
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -85,12 +88,12 @@ public class NeoServerWar implements NeoServer {
         stopJobs();
         stopDatabase();
 
-        try {
-            stopOsgiContainer();
-        } catch (Exception e) {
-            log.warn("Failed to cleanly shutdown Neo Server, database [%s]. Reason: %s", getDatabase().getLocation(),
-                    e.getMessage());
-        }
+//        try {
+//            stopOsgiContainer();
+//        } catch (Exception e) {
+//            log.warn("Failed to cleanly shutdown Neo Server, database [%s]. Reason: %s", getDatabase().getLocation(),
+//                    e.getMessage());
+//        }
         log.info("Successfully shutdown Neo Server, database [%s]", getDatabase().getLocation());
     }
 
@@ -114,16 +117,16 @@ public class NeoServerWar implements NeoServer {
         }
     }
 
-    private void startOsgiContainer() throws BundleException {
-        // Start embedded OSGi container, maybe
-        boolean osgiServerShouldStart = configurator.configuration().getBoolean(Configurator.ENABLE_OSGI_SERVER_PROPERTY_KEY, false);
-        if (osgiServerShouldStart) {
-            String bundleDirectory = configurator.configuration().getString(Configurator.OSGI_BUNDLE_DIR_PROPERTY_KEY, "../");
-            String cacheDirectory = configurator.configuration().getString(Configurator.OSGI_CACHE_DIR_PROPERTY_KEY, "../");
-            osgiContainer = new OSGiContainer(bundleDirectory, cacheDirectory);
-            osgiContainer.start();
-        }
-    }
+//    private void startOsgiContainer() throws BundleException {
+//        // Start embedded OSGi container, maybe
+//        boolean osgiServerShouldStart = configurator.configuration().getBoolean(Configurator.ENABLE_OSGI_SERVER_PROPERTY_KEY, false);
+//        if (osgiServerShouldStart) {
+//            String bundleDirectory = configurator.configuration().getString(Configurator.OSGI_BUNDLE_DIR_PROPERTY_KEY, "../");
+//            String cacheDirectory = configurator.configuration().getString(Configurator.OSGI_CACHE_DIR_PROPERTY_KEY, "../");
+//            osgiContainer = new OSGiContainer(bundleDirectory, cacheDirectory);
+//            osgiContainer.start();
+//        }
+//    }
 
     private void startRoundRobinDB() throws MalformedObjectNameException, IOException {
         RrdDb rrdDb = RrdFactory.createRrdDbAndSampler(database.graph, jobScheduler);
@@ -146,10 +149,10 @@ public class NeoServerWar implements NeoServer {
         jobScheduler.stopJobs();
     }
 
-    private void stopOsgiContainer() throws BundleException, InterruptedException {
-        if (osgiContainer != null) {
-            osgiContainer.shutdown();
-        }
-    }
+//    private void stopOsgiContainer() throws BundleException, InterruptedException {
+//        if (osgiContainer != null) {
+//            osgiContainer.shutdown();
+//        }
+//    }
 
 }
