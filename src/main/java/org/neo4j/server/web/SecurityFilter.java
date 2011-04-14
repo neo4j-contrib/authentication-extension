@@ -19,7 +19,6 @@
  */
 package org.neo4j.server.web;
 
-import org.neo4j.server.configuration.Configurator;
 import sun.misc.BASE64Decoder;
 
 import javax.servlet.*;
@@ -27,8 +26,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-import static org.neo4j.server.web.ConfigUtils.NEO_SERVER_AUTH_PASS_KEY;
-import static org.neo4j.server.web.ConfigUtils.NEO_SERVER_AUTH_USER_KEY;
 
 /**
  * @author tbaum
@@ -40,10 +37,10 @@ public class SecurityFilter implements Filter {
     private String pass;
 
     public void init(FilterConfig config) throws ServletException {
-        final Configurator configurator= (Configurator) config.getServletContext().getAttribute(ContextListener.CONFIGURATOR_KEY);
+      //  final Configurator configurator= (Configurator) config.getServletContext().getAttribute(ContextListener.CONFIGURATOR_KEY);
 
-        name = configurator.configuration().getString(NEO_SERVER_AUTH_USER_KEY);
-        pass = configurator.configuration().getString(NEO_SERVER_AUTH_PASS_KEY);
+      //  name = configurator.configuration().getString(NEO_SERVER_AUTH_USER_KEY);
+      //  pass = configurator.configuration().getString(NEO_SERVER_AUTH_PASS_KEY);
     }
 
     public void doFilter(final ServletRequest req, final ServletResponse res, final FilterChain chain)

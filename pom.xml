@@ -12,7 +12,6 @@
   <groupId>org.neo4j.app</groupId>
   <artifactId>neo4j-server-war</artifactId>
   <version>0.6-SNAPSHOT</version>
-  <packaging>war</packaging>
 
   <dependencies>
     <dependency>
@@ -23,13 +22,12 @@
     <dependency>
       <groupId>org.neo4j.app</groupId>
       <artifactId>neo4j-server</artifactId>
-      <version>1.3-SNAPSHOT</version>
-      <exclusions>
-        <exclusion>
-          <groupId>org.mortbay.jetty</groupId>
-          <artifactId>jetty</artifactId>
-        </exclusion>
-      </exclusions>
+      <version>1.3</version>
+    </dependency> <dependency>
+      <groupId>org.neo4j.app</groupId>
+      <artifactId>neo4j-server</artifactId>
+      <classifier>static-web</classifier>
+      <version>1.3</version>
     </dependency>
   </dependencies>
 </project>

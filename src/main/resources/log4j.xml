@@ -11,7 +11,7 @@
 
 
   <appender name="DEBUGLOG" class="org.apache.log4j.RollingFileAppender">
-    <param name="file" value="${catalina.home}/logs/debug.log"/>
+    <param name="file" value="/Users/tbaum/tmp/logs/debug.log"/>
     <param name="MaxFileSize" value="10MB"/>
     <param name="MaxBackupIndex" value="3"/>
     <layout class="org.apache.log4j.PatternLayout">
