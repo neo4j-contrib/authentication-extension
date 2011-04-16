@@ -1,7 +1,9 @@
 package org.neo4j.server;
 
+import org.apache.commons.configuration.Configuration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
+import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.logging.Logger;
@@ -25,63 +27,86 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
     private final Map<String, NeoServer> server = new HashMap<String, NeoServer>();
     private final File configFile = new File("conf/hosts.properties");
 
+    private final Thread shutdownHook = new Thread() {
+        @Override public void run() {
+            shutdown();
+        }
+    };
+
     private Server jetty;
     private PropertiesConfiguration hosts;
+    private AuthenticationService authenticationService;
+
 
     @Override public Integer start(String[] args) {
         try {
             hosts = new PropertiesConfiguration(configFile);
+            authenticationService = new AuthenticationService(hosts);
 
-            jetty = new Server(7474);  //TODO read from configuration?
-            jetty.setStopAtShutdown(true);
-            jetty.start();
+            jetty = startJetty();
 
-            new HostedContext(this, jetty, hosts);
+            HostedAdminContext.install(this);
+            SimpleSecurityContext.install(this);
 
-            Iterator it = hosts.getKeys();
-            while (it.hasNext()) {
-                String name = (String) it.next();
-                log.info("deploying host " + name);
-                loadVirtualServer(name);
-            }
+            startAllHosts(hosts);
 
-            restartJetty();
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
 
-            Runtime.getRuntime().addShutdownHook(new Thread() {
-                @Override
-                public void run() {
-                    log.info("Neo4j Server shutdown initiated by kill signal");
-                    for (NeoServer neoServer : server.values()) {
-                        try {
-                            neoServer.stop();
-                        } catch (Exception e) {
-                            e.printStackTrace();
-                        }
-                    }
-                    try {
-                        jetty.stop();
-                        jetty.join();
-                        jetty.setStopAtShutdown(false);
-                    } catch (Exception ignored) {
-                    }
-                }
-            });
             return Bootstrapper.OK;
         } catch (Exception e) {
             return Bootstrapper.WEB_SERVER_STARTUP_ERROR_CODE;
         }
     }
 
-    public void restartJetty() {
+    public Server getJetty() {
+        return jetty;
+    }
+
+    private void shutdown() {
+        log.info("Neo4j Server shutdown initiated by kill signal");
+        for (NeoServer neoServer : server.values()) {
+            try {
+                neoServer.stop();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+        }
         try {
-            jetty.getHandler().stop();
-            jetty.getHandler().start();
+            jetty.stop();
+            jetty.join();
+            jetty.setStopAtShutdown(false);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void startAllHosts(final Configuration hosts) {
+        final Iterator it = hosts.getKeys();
+        while (it.hasNext()) {
+            final String name = (String) it.next();
+            log.info("deploying host " + name);
+            loadVirtualServer(name);
+        }
+        restartJetty();
+    }
+
+    private Server startJetty() throws Exception {
+        final Server jetty = new Server(7474);  //TODO read from configuration?
+        jetty.setStopAtShutdown(true);
+        jetty.start();
+        return jetty;
+    }
+
+    public void restartJetty() {
+        final Handler handler = jetty.getHandler();
+        try {
+            handler.stop();
+            handler.start();
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
-    public void createVirtualServer(String serverName, String cred) {
+    public void createVirtualServer(final String serverName, final String cred) {
         log.info("create host " + serverName);
         hosts.addProperty(serverName, cred);
         storeConfig();
@@ -89,7 +114,7 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
         restartJetty();
     }
 
-    public void removeVirtualServer(String serverName) {
+    public void removeVirtualServer(final String serverName) {
         log.info("remove host " + serverName);
         hosts.clearProperty(serverName);
         storeConfig();
@@ -97,12 +122,12 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
         restartJetty();
     }
 
-    private void loadVirtualServer(String serverName) {
-        Jetty6VirtualHostWebServer virtualHostWebServer = new Jetty6VirtualHostWebServer(jetty, serverName);
+    private void loadVirtualServer(final String serverName) {
+        final Jetty6VirtualHostWebServer virtualHostWebServer = new Jetty6VirtualHostWebServer(jetty, serverName);
 
-        File configFile = new File("conf/neo4j-server.properties");
-        NeoServerWithEmbeddedWebServer neoServer = new NeoServerWithEmbeddedWebServer(this, new AddressResolver(),
-                null, configFile, virtualHostWebServer, getServerModules());
+        final File configFile = new File("conf/neo4j-server.properties");
+        final NeoServerWithEmbeddedWebServer neoServer = new NeoServerWithEmbeddedWebServer(this,
+                new AddressResolver(), null, configFile, virtualHostWebServer, getServerModules());
 
         server.put(serverName, neoServer);
 
@@ -124,7 +149,6 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
         server.remove(serverName).stop();
     }
 
-
     private void storeConfig() {
         try {
             hosts.save(configFile);
@@ -133,4 +157,7 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
         }
     }
 
+    public AuthenticationService getAuthenticationService() {
+        return authenticationService;
+    }
 }
