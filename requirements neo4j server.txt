@@ -1,0 +1,8 @@
+requirements for neo4j-server
+
+- multiple db in single server
+- limit resources for db (i.e disk space, node count..)
+- limit traversal/query resources (time, memory?)
+- disable gremlin console (until limits can be done)
+- configure database-(tuning) parameters for each db, based on profiles?
+- basic authentification
