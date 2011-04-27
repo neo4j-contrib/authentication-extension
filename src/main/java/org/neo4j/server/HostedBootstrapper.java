@@ -1,20 +1,23 @@
 package org.neo4j.server;
 
-import org.apache.commons.configuration.Configuration;
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
-import org.mortbay.jetty.Handler;
-import org.mortbay.jetty.Server;
-import org.neo4j.server.configuration.Configurator;
-import org.neo4j.server.logging.Logger;
-import org.neo4j.server.web.Jetty6VirtualHostWebServer;
+import static org.neo4j.server.Util.invokePrivate;
 
 import java.io.File;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 
-import static org.neo4j.server.Util.invokePrivate;
+import org.apache.commons.configuration.Configuration;
+import org.apache.commons.configuration.ConfigurationException;
+import org.apache.commons.configuration.PropertiesConfiguration;
+import org.mortbay.jetty.Handler;
+import org.mortbay.jetty.Server;
+import org.mortbay.jetty.SessionManager;
+import org.mortbay.jetty.servlet.HashSessionManager;
+import org.neo4j.helpers.collection.IteratorUtil;
+import org.neo4j.server.configuration.Configurator;
+import org.neo4j.server.logging.Logger;
+import org.neo4j.server.web.Jetty6VirtualHostWebServer;
 
 /**
  * @author tbaum
@@ -36,6 +39,7 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
     private Server jetty;
     private PropertiesConfiguration hosts;
     private AuthenticationService authenticationService;
+    private final SessionManager sm = new HashSessionManager();
 
 
     @Override public Integer start(String[] args) {
@@ -77,12 +81,13 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
             jetty.setStopAtShutdown(false);
         } catch (Exception ignored) {
         }
+        server.clear();
+        jetty = null;
     }
 
     private void startAllHosts(final Configuration hosts) {
-        final Iterator it = hosts.getKeys();
-        while (it.hasNext()) {
-            final String name = (String) it.next();
+        for ( String name : IteratorUtil.asIterable( (Iterator<String>) hosts.getKeys() ) )
+        {
             log.info("deploying host " + name);
             loadVirtualServer(name);
         }
@@ -123,7 +128,7 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
     }
 
     private void loadVirtualServer(final String serverName) {
-        final Jetty6VirtualHostWebServer virtualHostWebServer = new Jetty6VirtualHostWebServer(jetty, serverName);
+        final Jetty6VirtualHostWebServer virtualHostWebServer = new Jetty6VirtualHostWebServer( sm, jetty, serverName );
 
         final File configFile = new File("conf/neo4j-server.properties");
         final NeoServerWithEmbeddedWebServer neoServer = new NeoServerWithEmbeddedWebServer(this,

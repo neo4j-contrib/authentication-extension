@@ -1,5 +1,8 @@
 data
 target
+.project
+.classpath
+.settings
 *.ipw
 *.ipr
 *.iml
