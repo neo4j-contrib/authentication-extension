@@ -10,7 +10,6 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
-import static javax.servlet.http.HttpServletResponse.SC_NOT_FOUND;
 import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 
 /**
@@ -34,12 +33,6 @@ public class SimpleSecurityContext extends Context {
     public void handle(String target, HttpServletRequest request, HttpServletResponse response, int dispatch) throws IOException {
         final Request base_request = (request instanceof Request) ? (Request) request : HttpConnection.getCurrentConnection().getRequest();
 
-        final String serverName = request.getServerName();
-        if (!authenticationService.isConfigured(serverName)) {
-            send404(base_request, response);
-            return;
-        }
-
         final String authHeader = request.getHeader("Authorization");
         if (authHeader == null) {
             sendAuth(base_request, response);
@@ -47,15 +40,10 @@ public class SimpleSecurityContext extends Context {
             final String encoded = authHeader.substring(authHeader.indexOf(" ") + 1);
             final byte[] decoded = new BASE64Decoder().decodeBuffer(encoded);
 
-            if (!authenticationService.isValid(serverName, decoded)) {
+            if (!authenticationService.isValid(decoded)) {
                 sendAuth(base_request, response);
             }
         }
-    }
-
-    private void send404(Request request, HttpServletResponse response) throws IOException {
-        response.sendError(SC_NOT_FOUND);
-        request.setHandled(true);
     }
 
     private void sendAuth(Request request, HttpServletResponse response) throws IOException {

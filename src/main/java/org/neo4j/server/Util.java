@@ -1,7 +1,5 @@
 package org.neo4j.server;
 
-import org.mortbay.jetty.Server;
-
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -23,11 +21,21 @@ public class Util {
         }
     }
 
-    public static void setPrivateField(final Object target, final Class targetClass, final String name, final Server value) {
+    public static <T> T getPrivateField(Object server, final String name) {
         try {
-            Field _jetty = targetClass.getDeclaredField(name);
-            _jetty.setAccessible(true);
-            _jetty.set(target, value);
+            Field field = server.getClass().getDeclaredField(name);
+            field.setAccessible(true);
+            return (T) field.get(server);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static void setPrivateField(final Object target, final Class targetClass, final String name, final Object value) {
+        try {
+            Field field = targetClass.getDeclaredField(name);
+            field.setAccessible(true);
+            field.set(target, value);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
