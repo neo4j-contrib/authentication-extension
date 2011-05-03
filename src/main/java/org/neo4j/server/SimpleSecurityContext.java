@@ -20,30 +20,39 @@ public class SimpleSecurityContext extends Context {
 
     private final AuthenticationService authenticationService;
 
-    public static Context install(final HostedBootstrapper bootstrapper) {
-        return new SimpleSecurityContext(bootstrapper.getJetty(), bootstrapper.getAuthenticationService());
+    public static Context install(final Server jetty, final AuthenticationService authenticationService) {
+        return new SimpleSecurityContext(jetty, authenticationService);
     }
 
-    private SimpleSecurityContext(Server jetty, AuthenticationService authenticationService) {
+    protected SimpleSecurityContext(Server jetty, AuthenticationService authenticationService) {
         super(jetty, "/");
         this.authenticationService = authenticationService;
     }
 
     @Override
     public void handle(String target, HttpServletRequest request, HttpServletResponse response, int dispatch) throws IOException {
+        if (!target.startsWith("/admin/")) {
+            handleAuth(request, response);
+        }
+    }
+
+    protected boolean handleAuth(HttpServletRequest request, HttpServletResponse response) throws IOException {
         final Request base_request = (request instanceof Request) ? (Request) request : HttpConnection.getCurrentConnection().getRequest();
 
         final String authHeader = request.getHeader("Authorization");
         if (authHeader == null) {
             sendAuth(base_request, response);
+            return false;
         } else {
             final String encoded = authHeader.substring(authHeader.indexOf(" ") + 1);
             final byte[] decoded = new BASE64Decoder().decodeBuffer(encoded);
 
-            if (!authenticationService.isValid(decoded)) {
+            if (!authenticationService.hasAccess(request.getMethod(), decoded)) {
                 sendAuth(base_request, response);
+                return false;
             }
         }
+        return true;
     }
 
     private void sendAuth(Request request, HttpServletResponse response) throws IOException {

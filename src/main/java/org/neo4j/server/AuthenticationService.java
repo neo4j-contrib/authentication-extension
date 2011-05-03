@@ -2,18 +2,8 @@ package org.neo4j.server;
 
 /**
  * @author tbaum
- * @since 16.04.11 15:38
+ * @since 03.05.11 20:02
  */
-public class AuthenticationService {
-
-    private final String cred;
-
-    AuthenticationService(final String cred) {
-        this.cred = cred;
-    }
-
-
-    boolean isValid(final byte[] credentials) {
-        return new String(credentials).equals(cred);
-    }
+public interface AuthenticationService {
+    boolean hasAccess(String method, byte[] credentials);
 }

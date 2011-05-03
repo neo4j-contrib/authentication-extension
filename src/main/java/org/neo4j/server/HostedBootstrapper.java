@@ -30,7 +30,6 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
     };
 
     private Server jetty;
-    private AuthenticationService authenticationService;
     private final SessionManager sm = new HashSessionManager();
     private PropertyFileConfigurator configurator = new PropertyFileConfigurator(getConfigFile());
 
@@ -39,8 +38,9 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
             jetty = startJetty();
             String a = configurator.configuration().getString("org.neo4j.server.credentials");
             if (a != null) {
-                authenticationService = new AuthenticationService(a);
-                SimpleSecurityContext.install(this);
+                MultipleAuthenticationService users = new MultipleAuthenticationService(getAclConfigFile());
+                HostedAdminContext.install(jetty, new SingleUserAuthenticationService(a), users);
+                SimpleSecurityContext.install(jetty, users);
             }
 
             loadVirtualServer();
@@ -54,8 +54,9 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
         }
     }
 
-    public Server getJetty() {
-        return jetty;
+    private File getAclConfigFile() {
+        return new File(getConfigFile().getParentFile(),
+                "db-acl.properties");
     }
 
     private void shutdown() {
@@ -104,7 +105,4 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
         invokePrivate(neoServer, neoServer.getClass(), "startWebServer");
     }
 
-    public AuthenticationService getAuthenticationService() {
-        return authenticationService;
-    }
 }
