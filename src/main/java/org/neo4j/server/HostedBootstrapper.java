@@ -25,6 +25,7 @@ import org.mortbay.jetty.SessionManager;
 import org.mortbay.jetty.servlet.HashSessionManager;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
+import org.neo4j.server.enterprise.EnterpriseNeoServerBootstrapper;
 import org.neo4j.server.logging.Logger;
 import org.neo4j.server.web.Jetty6PatchedWebServer;
 
@@ -36,7 +37,7 @@ import static org.neo4j.server.Util.invokePrivate;
  * @author tbaum
  * @since 14.04.11 13:04
  */
-public class HostedBootstrapper extends NeoServerBootstrapper {
+public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
 
     private static Logger log = Logger.getLogger(Bootstrapper.class);
 
@@ -54,6 +55,8 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
 
     @Override public Integer start(String[] args) {
         try {
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+
             jetty = startJetty();
             String a = configurator.configuration().getString("org.neo4j.server.credentials");
             if (a != null) {
@@ -65,10 +68,12 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
             loadVirtualServer();
             restartJetty();
 
-            Runtime.getRuntime().addShutdownHook(shutdownHook);
+            log.error("startup succeeded");
 
             return Bootstrapper.OK;
         } catch (Exception e) {
+            log.error("got exception " + e + " will exit");
+            System.exit(Bootstrapper.WEB_SERVER_STARTUP_ERROR_CODE);
             return Bootstrapper.WEB_SERVER_STARTUP_ERROR_CODE;
         }
     }
@@ -80,7 +85,9 @@ public class HostedBootstrapper extends NeoServerBootstrapper {
 
     private void shutdown() {
         log.info("Neo4j Server shutdown initiated by kill signal");
-        neoServer.stop();
+        if (neoServer != null) {
+            neoServer.stop();
+        }
         try {
             jetty.stop();
             jetty.join();
