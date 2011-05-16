@@ -19,11 +19,13 @@
  */
 package org.neo4j.server;
 
-import org.mortbay.jetty.HttpConnection;
-import org.mortbay.jetty.Request;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.FilterHolder;
+import org.mortbay.jetty.servlet.ServletHolder;
+import org.neo4j.server.web.SecurityFilter;
 
+import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
@@ -32,40 +34,50 @@ import java.io.IOException;
  * @author tbaum
  * @since 15.04.11 02:04
  */
-public class HostedAdminContext extends SimpleSecurityContext {
+public class HostedAdminContext extends Context {
 
     private final MultipleAuthenticationService users;
 
-    public static Context install(final Server jetty, final AuthenticationService authenticationService, MultipleAuthenticationService users) {
+    public static Context install(Server jetty, AuthenticationService authenticationService,
+                                  MultipleAuthenticationService users) {
         return new HostedAdminContext(jetty, authenticationService, users);
     }
 
-    private HostedAdminContext(Server jetty, AuthenticationService authenticationService, MultipleAuthenticationService users) {
-        super(jetty, authenticationService);
+    private HostedAdminContext(Server jetty, AuthenticationService authenticationService,
+                               MultipleAuthenticationService users) {
+        super(jetty, "/admin", false, false);
         this.users = users;
+
+        addFilter(new FilterHolder(new SecurityFilter(authenticationService, "neo4j-admin")), "/*", ALL);
+        addServlet(new ServletHolder(new AddUserRoServlet()), "/add-user-ro/*");
+        addServlet(new ServletHolder(new AddUserRwServlet()), "/add-user-rw/*");
+        addServlet(new ServletHolder(new RemoveUserServlet()), "/remove-user");
     }
 
-    @Override
-    public void handle(String target, HttpServletRequest request, HttpServletResponse response, int dispatch) throws IOException {
-        Request base_request = (request instanceof Request) ? (Request) request : HttpConnection.getCurrentConnection().getRequest();
-
-        if (target.startsWith("/admin/add-user-ro") && handleAuth(request, response)) {
-            final String user = request.getParameter("user");
-            users.setPermissionForUser(user, true, false);
-            sendOk(base_request, response);
-        } else if (target.startsWith("/admin/add-user-rw") && handleAuth(request, response)) {
-            final String user = request.getParameter("user");
-            users.setPermissionForUser(user, true, true);
-            sendOk(base_request, response);
-        } else if (target.startsWith("/admin/remove-user") && handleAuth(request, response)) {
-            final String user = request.getParameter("user");
+    private class RemoveUserServlet extends HttpServlet {
+        @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+            final String user = req.getParameter("user");
+            if (user == null) throw new IllegalArgumentException("missing parameter 'user'");
             users.setPermissionForUser(user, false, false);
-            sendOk(base_request, response);
+            resp.getWriter().println("OK");
         }
     }
 
-    private void sendOk(Request base_request, HttpServletResponse response) throws IOException {
-        response.getWriter().println("OK");
-        base_request.setHandled(true);
+    private class AddUserRwServlet extends HttpServlet {
+        @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+            final String user = req.getParameter("user");
+            if (user == null) throw new IllegalArgumentException("missing parameter 'user'");
+            users.setPermissionForUser(user, true, true);
+            resp.getWriter().println("OK");
+        }
+    }
+
+    private class AddUserRoServlet extends HttpServlet {
+        @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+            final String user = req.getParameter("user");
+            if (user == null) throw new IllegalArgumentException("missing parameter 'user'");
+            users.setPermissionForUser(user, true, false);
+            resp.getWriter().println("OK");
+        }
     }
 }

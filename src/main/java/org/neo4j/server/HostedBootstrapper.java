@@ -22,13 +22,17 @@ package org.neo4j.server;
 import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.SessionManager;
+import org.mortbay.jetty.servlet.Context;
+import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.HashSessionManager;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.enterprise.EnterpriseNeoServerBootstrapper;
 import org.neo4j.server.logging.Logger;
 import org.neo4j.server.web.Jetty6PatchedWebServer;
+import org.neo4j.server.web.SecurityFilter;
 
+import javax.servlet.Filter;
 import java.io.File;
 
 import static org.neo4j.server.Util.invokePrivate;
@@ -53,36 +57,6 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
     private final SessionManager sm = new HashSessionManager();
     private PropertyFileConfigurator configurator = new PropertyFileConfigurator(getConfigFile());
 
-    @Override public Integer start(String[] args) {
-        try {
-            Runtime.getRuntime().addShutdownHook(shutdownHook);
-
-            jetty = startJetty();
-            String a = configurator.configuration().getString("org.neo4j.server.credentials");
-            if (a != null) {
-                MultipleAuthenticationService users = new MultipleAuthenticationService(getAclConfigFile());
-                HostedAdminContext.install(jetty, new SingleUserAuthenticationService(a), users);
-                SimpleSecurityContext.install(jetty, users);
-            }
-
-            loadVirtualServer();
-            restartJetty();
-
-            log.error("startup succeeded");
-
-            return Bootstrapper.OK;
-        } catch (Exception e) {
-            log.error("got exception " + e + " will exit");
-            System.exit(Bootstrapper.WEB_SERVER_STARTUP_ERROR_CODE);
-            return Bootstrapper.WEB_SERVER_STARTUP_ERROR_CODE;
-        }
-    }
-
-    private File getAclConfigFile() {
-        return new File(getConfigFile().getParentFile(),
-                "db-acl.properties");
-    }
-
     private void shutdown() {
         log.info("Neo4j Server shutdown initiated by kill signal");
         if (neoServer != null) {
@@ -98,6 +72,33 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
         jetty = null;
     }
 
+    @Override public Integer start(String[] args) {
+        try {
+            Runtime.getRuntime().addShutdownHook(shutdownHook);
+
+            jetty = startJetty();
+            final String masterCredendials = configurator.configuration().getString("org.neo4j.server.credentials");
+            if (masterCredendials == null) {
+                throw new RuntimeException("missing master-credentials in neo4j-server.properties");
+            }
+            final MultipleAuthenticationService users = new MultipleAuthenticationService(getAclConfigFile());
+            HostedAdminContext.install(jetty, new SingleUserAuthenticationService(masterCredendials), users);
+
+            loadVirtualServer();
+            restartJetty();
+
+            addSecurityFilter(users);
+
+            log.info("startup succeeded");
+
+            return Bootstrapper.OK;
+        } catch (Exception e) {
+            log.error("got exception " + e + " will exit");
+            System.exit(Bootstrapper.WEB_SERVER_STARTUP_ERROR_CODE);
+            return Bootstrapper.WEB_SERVER_STARTUP_ERROR_CODE;
+        }
+    }
+
     private Server startJetty() throws Exception {
         final Server jetty = new Server(configurator.configuration().getInt(Configurator.WEBSERVER_PORT_PROPERTY_KEY,
                 Configurator.DEFAULT_WEBSERVER_PORT));
@@ -106,14 +107,8 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
         return jetty;
     }
 
-    public void restartJetty() {
-        final Handler handler = jetty.getHandler();
-        try {
-            handler.stop();
-            handler.start();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+    private File getAclConfigFile() {
+        return new File(getConfigFile().getParentFile(), "db-acl.properties");
     }
 
     private void loadVirtualServer() {
@@ -131,4 +126,23 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
         invokePrivate(neoServer, neoServer.getClass(), "startWebServer");
     }
 
+    public void restartJetty() {
+        final Handler handler = jetty.getHandler();
+        try {
+            handler.stop();
+            handler.start();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void addSecurityFilter(final MultipleAuthenticationService users) {
+        for (Handler handler : jetty.getHandlers()) {
+            Filter f = new SecurityFilter(users, "neo4j graphdb");
+            if (handler instanceof Context && !(handler instanceof HostedAdminContext)) {
+                ((Context) handler).addFilter(new FilterHolder(f), "/*", Handler.ALL);
+                log.info("--------> securing: " + handler);
+            }
+        }
+    }
 }

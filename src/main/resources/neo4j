@@ -10,7 +10,7 @@
 HOME=$( readlink -f $( dirname $0  )/.. )
 cd $HOME
 
-TIMEOUT=5
+TIMEOUT=20
 PID_FILE=$HOME/data/running.pid
 JAVA_OPTS="-server -Dorg.neo4j.server.properties=conf/neo4j-server.properties -Dlog4j.configuration=file:conf/log4j.properties -Djava.util.logging.config.file=conf/logging.properties"
 
