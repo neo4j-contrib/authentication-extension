@@ -21,8 +21,6 @@ package org.neo4j.server;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
-import org.mortbay.jetty.Server;
-import org.mortbay.jetty.servlet.Context;
 
 import java.io.File;
 
@@ -35,8 +33,6 @@ public class MultipleAuthenticationService implements AuthenticationService {
     private final PropertiesConfiguration configuration;
     private final File configFile;
 
-
-
     MultipleAuthenticationService(File configFile) {
         this.configFile = configFile;
         try {
@@ -46,11 +42,11 @@ public class MultipleAuthenticationService implements AuthenticationService {
         }
     }
 
-    public void setPermissionForUser(String user, boolean read, boolean write) {
-        if (read || write) {
-            configuration.setProperty(user, (read ? "r" : "") + (write ? "w" : ""));
-        } else {
+    public void setPermissionForUser(String user, Permission permission) {
+        if (permission == Permission.NONE) {
             configuration.clearProperty(user);
+        } else {
+            configuration.setProperty(user, permission.name().toLowerCase());
         }
         try {
             configuration.save(configFile);
@@ -74,5 +70,9 @@ public class MultipleAuthenticationService implements AuthenticationService {
             }
         }
         return false;
+    }
+
+    public enum Permission {
+        NONE, RO, RW
     }
 }

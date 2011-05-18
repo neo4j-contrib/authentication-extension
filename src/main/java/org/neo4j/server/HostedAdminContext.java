@@ -30,6 +30,8 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 
+import static org.neo4j.server.MultipleAuthenticationService.Permission.*;
+
 /**
  * @author tbaum
  * @since 15.04.11 02:04
@@ -49,16 +51,16 @@ public class HostedAdminContext extends Context {
         this.users = users;
 
         addFilter(new FilterHolder(new SecurityFilter(authenticationService, "neo4j-admin")), "/*", ALL);
-        addServlet(new ServletHolder(new AddUserRoServlet()), "/add-user-ro/*");
-        addServlet(new ServletHolder(new AddUserRwServlet()), "/add-user-rw/*");
+        addServlet(new ServletHolder(new AddUserRoServlet()), "/add-user-ro");
+        addServlet(new ServletHolder(new AddUserRwServlet()), "/add-user-rw");
         addServlet(new ServletHolder(new RemoveUserServlet()), "/remove-user");
     }
 
     private class RemoveUserServlet extends HttpServlet {
-        @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        @Override protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException {
             final String user = req.getParameter("user");
             if (user == null) throw new IllegalArgumentException("missing parameter 'user'");
-            users.setPermissionForUser(user, false, false);
+            users.setPermissionForUser(user, NONE);
             resp.getWriter().println("OK");
         }
     }
@@ -67,7 +69,7 @@ public class HostedAdminContext extends Context {
         @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
             final String user = req.getParameter("user");
             if (user == null) throw new IllegalArgumentException("missing parameter 'user'");
-            users.setPermissionForUser(user, true, true);
+            users.setPermissionForUser(user, RW);
             resp.getWriter().println("OK");
         }
     }
@@ -76,7 +78,7 @@ public class HostedAdminContext extends Context {
         @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
             final String user = req.getParameter("user");
             if (user == null) throw new IllegalArgumentException("missing parameter 'user'");
-            users.setPermissionForUser(user, true, false);
+            users.setPermissionForUser(user, RO);
             resp.getWriter().println("OK");
         }
     }
