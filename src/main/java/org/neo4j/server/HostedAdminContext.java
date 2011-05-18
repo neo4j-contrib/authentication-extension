@@ -57,7 +57,7 @@ public class HostedAdminContext extends Context {
     }
 
     private class RemoveUserServlet extends HttpServlet {
-        @Override protected void doDelete(HttpServletRequest req, HttpServletResponse resp) throws IOException {
+        @Override protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws IOException {
             final String user = req.getParameter("user");
             if (user == null) throw new IllegalArgumentException("missing parameter 'user'");
             users.setPermissionForUser(user, NONE);
