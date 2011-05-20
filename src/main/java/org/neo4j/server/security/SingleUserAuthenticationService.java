@@ -17,12 +17,21 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.server;
+package org.neo4j.server.security;
 
 /**
  * @author tbaum
- * @since 03.05.11 20:02
+ * @since 16.04.11 15:38
  */
-public interface AuthenticationService {
-    boolean hasAccess(String method, byte[] credentials);
+public class SingleUserAuthenticationService implements AuthenticationService {
+
+    private final String credentials;
+
+    public SingleUserAuthenticationService(final String credentials) {
+        this.credentials = credentials;
+    }
+
+    public boolean hasAccess(String method, final byte[] credentials) {
+        return this.credentials.equals(new String(credentials));
+    }
 }

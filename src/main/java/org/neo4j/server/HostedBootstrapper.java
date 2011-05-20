@@ -19,20 +19,19 @@
  */
 package org.neo4j.server;
 
-import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.SessionManager;
-import org.mortbay.jetty.servlet.Context;
-import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.HashSessionManager;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.enterprise.EnterpriseNeoServerBootstrapper;
+import org.neo4j.server.hosted.HostedAdminContext;
 import org.neo4j.server.logging.Logger;
+import org.neo4j.server.security.MultipleAuthenticationService;
+import org.neo4j.server.security.SingleUserAuthenticationService;
+import org.neo4j.server.statistic.HostedAdminStatsticContext;
 import org.neo4j.server.web.Jetty6PatchedWebServer;
-import org.neo4j.server.web.SecurityFilter;
 
-import javax.servlet.Filter;
 import java.io.File;
 
 import static org.neo4j.server.Util.invokePrivate;
@@ -81,13 +80,18 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
             if (masterCredendials == null) {
                 throw new RuntimeException("missing master-credentials in neo4j-server.properties");
             }
-            final MultipleAuthenticationService users = new MultipleAuthenticationService(getAclConfigFile());
-            HostedAdminContext.install(jetty, new SingleUserAuthenticationService(masterCredendials), users);
+            SingleUserAuthenticationService adminAuth = new SingleUserAuthenticationService(masterCredendials);
+            MultipleAuthenticationService users = new MultipleAuthenticationService(getAclConfigFile());
+
+            HostedAdminStatsticContext statistics = new HostedAdminStatsticContext(jetty, "/admin/statistic", adminAuth);
+            HostedAdminContext admin = new HostedAdminContext(jetty, adminAuth, users);
 
             loadVirtualServer();
-            restartJetty();
 
-            addSecurityFilter(users);
+            admin.addSecurityFilter();
+            statistics.addTimingFilter();
+
+            jetty.start();
 
             log.info("startup succeeded");
 
@@ -103,7 +107,6 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
         final Server jetty = new Server(configurator.configuration().getInt(Configurator.WEBSERVER_PORT_PROPERTY_KEY,
                 Configurator.DEFAULT_WEBSERVER_PORT));
         jetty.setStopAtShutdown(true);
-        jetty.start();
         return jetty;
     }
 
@@ -124,25 +127,5 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
         invokePrivate(neoServer, neoServer.getClass(), "startExtensionInitialization");
         invokePrivate(neoServer, neoServer.getClass(), "startModules");
         invokePrivate(neoServer, neoServer.getClass(), "startWebServer");
-    }
-
-    public void restartJetty() {
-        final Handler handler = jetty.getHandler();
-        try {
-            handler.stop();
-            handler.start();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void addSecurityFilter(final MultipleAuthenticationService users) {
-        for (Handler handler : jetty.getHandlers()) {
-            Filter f = new SecurityFilter(users, "neo4j graphdb");
-            if (handler instanceof Context && !(handler instanceof HostedAdminContext)) {
-                ((Context) handler).addFilter(new FilterHolder(f), "/*", Handler.ALL);
-                log.info("--------> securing: " + handler);
-            }
-        }
     }
 }

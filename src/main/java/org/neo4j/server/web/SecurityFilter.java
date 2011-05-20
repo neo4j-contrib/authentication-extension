@@ -19,7 +19,7 @@
  */
 package org.neo4j.server.web;
 
-import org.neo4j.server.AuthenticationService;
+import org.neo4j.server.security.AuthenticationService;
 import sun.misc.BASE64Decoder;
 
 import javax.servlet.*;

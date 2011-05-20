@@ -17,7 +17,7 @@
  * You should have received a copy of the GNU Affero General Public License
  * along with this program. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.neo4j.server;
+package org.neo4j.server.security;
 
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.configuration.PropertiesConfiguration;
@@ -33,7 +33,7 @@ public class MultipleAuthenticationService implements AuthenticationService {
     private final PropertiesConfiguration configuration;
     private final File configFile;
 
-    MultipleAuthenticationService(File configFile) {
+    public MultipleAuthenticationService(File configFile) {
         this.configFile = configFile;
         try {
             this.configuration = new PropertiesConfiguration(configFile);
