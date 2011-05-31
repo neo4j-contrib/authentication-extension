@@ -23,10 +23,7 @@ import org.mortbay.jetty.Response;
 
 import javax.servlet.*;
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 
-import static java.lang.System.currentTimeMillis;
 import static java.lang.System.nanoTime;
 
 /**
@@ -35,10 +32,11 @@ import static java.lang.System.nanoTime;
  */
 public class StatisticFilter implements Filter {
 
-    private volatile long count = 0;
-    private volatile long start = System.currentTimeMillis();
-    private volatile StatisticRecord size = new StatisticRecord();
-    private volatile StatisticRecord duration = new StatisticRecord();
+    private final StatisticCollector collector;
+
+    public StatisticFilter(final StatisticCollector collector) {
+        this.collector = collector;
+    }
 
     @Override public void init(FilterConfig filterConfig) throws ServletException {
     }
@@ -49,44 +47,10 @@ public class StatisticFilter implements Filter {
         try {
             chain.doFilter(request, response);
         } finally {
-            long d = nanoTime() - start;
-
-            synchronized (this) {
-                count++;
-                duration.addValue(d / 1000000);
-                size.addValue(((Response) response).getContentCount());
-            }
-
+            collector.update((nanoTime() - start) / 1000000.0, ((Response) response).getContentCount());
         }
     }
 
     @Override public void destroy() {
-    }
-
-    public Map<String, Object> aggregate() {
-        final StatisticRecord duration, size;
-        final long start, end, count;
-
-        synchronized (this) {
-            count = this.count;
-            duration = this.duration;
-            size = this.size;
-            start = this.start;
-
-            end = this.start = currentTimeMillis();
-            this.count = 0;
-            this.duration = new StatisticRecord();
-            this.size = new StatisticRecord();
-        }
-
-        Map<String, Object> result = new HashMap<String, Object>();
-
-        result.put("timeStamp", (start + end) / 2000);
-        result.put("period", (end - start) / 1000);
-        result.put("requests", count);
-        result.put("duration", duration);
-        result.put("size", size);
-
-        return result;
     }
 }

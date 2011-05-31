@@ -20,8 +20,6 @@
 package org.neo4j.server;
 
 import org.mortbay.jetty.Server;
-import org.mortbay.jetty.SessionManager;
-import org.mortbay.jetty.servlet.HashSessionManager;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.enterprise.EnterpriseNeoServerBootstrapper;
@@ -29,12 +27,14 @@ import org.neo4j.server.hosted.HostedAdminContext;
 import org.neo4j.server.logging.Logger;
 import org.neo4j.server.security.MultipleAuthenticationService;
 import org.neo4j.server.security.SingleUserAuthenticationService;
+import org.neo4j.server.startup.healthcheck.StartupHealthCheck;
 import org.neo4j.server.statistic.HostedAdminStatsticContext;
-import org.neo4j.server.web.Jetty6PatchedWebServer;
+import org.neo4j.server.web.Jetty6WebServer;
 
 import java.io.File;
 
-import static org.neo4j.server.Util.invokePrivate;
+import static org.neo4j.server.configuration.Configurator.DEFAULT_WEBSERVER_PORT;
+import static org.neo4j.server.configuration.Configurator.WEBSERVER_PORT_PROPERTY_KEY;
 
 /**
  * @author tbaum
@@ -53,8 +53,6 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
     };
 
     private Server jetty;
-    private final SessionManager sm = new HashSessionManager();
-    private PropertyFileConfigurator configurator = new PropertyFileConfigurator(getConfigFile());
 
     private void shutdown() {
         log.info("Neo4j Server shutdown initiated by kill signal");
@@ -75,16 +73,20 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
         try {
             Runtime.getRuntime().addShutdownHook(shutdownHook);
 
-            jetty = startJetty();
-            final String masterCredendials = configurator.configuration().getString("org.neo4j.server.credentials");
+            final Configurator config = getConfigurator();
+
+            jetty = new Server(config.configuration().getInt(WEBSERVER_PORT_PROPERTY_KEY, DEFAULT_WEBSERVER_PORT));
+            jetty.setStopAtShutdown(true);
+
+            final String masterCredendials = config.configuration().getString("org.neo4j.server.credentials");
             if (masterCredendials == null) {
                 throw new RuntimeException("missing master-credentials in neo4j-server.properties");
             }
             SingleUserAuthenticationService adminAuth = new SingleUserAuthenticationService(masterCredendials);
-            MultipleAuthenticationService users = new MultipleAuthenticationService(getAclConfigFile());
+            MultipleAuthenticationService users = new MultipleAuthenticationService(getAclConfigFile(config));
 
-            HostedAdminStatsticContext statistics = new HostedAdminStatsticContext(jetty, "/admin/statistic", adminAuth);
-            HostedAdminContext admin = new HostedAdminContext(jetty, adminAuth, users);
+            HostedAdminStatsticContext statistics = new HostedAdminStatsticContext(jetty, "/admin/statistic", adminAuth, 60);
+            HostedAdminContext admin = new HostedAdminContext(jetty, "/admin", adminAuth, users);
 
             loadVirtualServer();
 
@@ -103,29 +105,31 @@ public class HostedBootstrapper extends EnterpriseNeoServerBootstrapper {
         }
     }
 
-    private Server startJetty() throws Exception {
-        final Server jetty = new Server(configurator.configuration().getInt(Configurator.WEBSERVER_PORT_PROPERTY_KEY,
-                Configurator.DEFAULT_WEBSERVER_PORT));
-        jetty.setStopAtShutdown(true);
-        return jetty;
-    }
+    private File getAclConfigFile(final Configurator configurator) {
+        if (!(configurator instanceof PropertyFileConfigurator)) {
+            throw new RuntimeException("expecting configuration to be a PropertyFileConfigurator");
+        }
+        PropertyFileConfigurator propertyFileConfigurator = (PropertyFileConfigurator) configurator;
 
-    private File getAclConfigFile() {
-        return new File(getConfigFile().getParentFile(), "db-acl.properties");
+        return new File(propertyFileConfigurator.getPropertyFileDirectory(), "db-acl.properties");
     }
 
     private void loadVirtualServer() {
-        final Jetty6PatchedWebServer patchedWebServer = new Jetty6PatchedWebServer(sm, jetty);
+        this.neoServer = new NeoServerWithEmbeddedWebServer(
+                this,
+                new AddressResolver(),
+                new StartupHealthCheck(),
+                getConfigurator(),
+                new Jetty6WebServer() {
+                    @Override protected Server createJetty() {
+                        return jetty;
+                    }
 
-        final File configFile = new File("conf/neo4j-server.properties");
-        this.neoServer = new NeoServerWithEmbeddedWebServer(this,
-                new AddressResolver(), null, configFile, patchedWebServer, getServerModules());
+                    @Override protected void startJetty() {
+                    }
+                },
+                getServerModules());
 
-        //TODO refactor NeoServerWithEmbeddedWebServer.start()
-        invokePrivate(neoServer, neoServer.getClass(), "validateConfiguration");
-        invokePrivate(neoServer, neoServer.getClass(), "startDatabase");
-        invokePrivate(neoServer, neoServer.getClass(), "startExtensionInitialization");
-        invokePrivate(neoServer, neoServer.getClass(), "startModules");
-        invokePrivate(neoServer, neoServer.getClass(), "startWebServer");
+        neoServer.start();
     }
 }

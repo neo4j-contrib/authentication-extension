@@ -45,8 +45,8 @@ public class HostedAdminContext extends Context {
     private final MultipleAuthenticationService users;
     private final SecurityFilter securityFilter;
 
-    public HostedAdminContext(Server jetty, AuthenticationService adminAuth, MultipleAuthenticationService users) {
-        super(jetty, "/admin", false, false);
+    public HostedAdminContext(Server jetty, final String contextPath, AuthenticationService adminAuth, MultipleAuthenticationService users) {
+        super(jetty, contextPath, false, false);
         this.users = users;
         this.securityFilter = new SecurityFilter(this.users, "neo4j graphdb");
 

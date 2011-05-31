@@ -19,21 +19,18 @@
  */
 package org.neo4j.server.statistic;
 
-import org.codehaus.jackson.map.ObjectMapper;
 import org.mortbay.jetty.Handler;
 import org.mortbay.jetty.Server;
 import org.mortbay.jetty.servlet.Context;
 import org.mortbay.jetty.servlet.FilterHolder;
 import org.mortbay.jetty.servlet.ServletHolder;
 import org.neo4j.server.security.AuthenticationService;
-import org.neo4j.server.logging.Logger;
 import org.neo4j.server.web.SecurityFilter;
 
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
-import java.util.*;
 
 /**
  * @author tbaum
@@ -41,16 +38,30 @@ import java.util.*;
  */
 public class HostedAdminStatsticContext extends Context {
 
-    private static final Logger log = Logger.getLogger(HostedAdminStatsticContext.class);
+    private final StatisticCollector statistics = new StatisticCollector();
+    private final StatisticFilter statisticFilter = new StatisticFilter(statistics);
 
-    private final StatisticFilter statisticFilter = new StatisticFilter();
-    private List<Map<String, Object>> statistics = new ArrayList<Map<String, Object>>();
+    public static Long getLongParameter(final HttpServletRequest req, final String name) {
+        final String value = req.getParameter(name);
+        if (value != null) {
+            return Long.parseLong(value);
+        }
+        return null;
+    }
 
     public HostedAdminStatsticContext(Server jetty, String contextPath) {
         this(jetty, contextPath, null);
     }
 
+    public HostedAdminStatsticContext(Server jetty, String contextPath, int period) {
+        this(jetty, contextPath, null, period);
+    }
+
     public HostedAdminStatsticContext(Server jetty, String contextPath, AuthenticationService authenticationService) {
+        this(jetty, contextPath, authenticationService, 60);
+    }
+
+    public HostedAdminStatsticContext(Server jetty, String contextPath, AuthenticationService authenticationService, int period) {
         super(jetty, contextPath, false, false);
 
         if (authenticationService != null) {
@@ -58,7 +69,7 @@ public class HostedAdminStatsticContext extends Context {
         }
         addServlet(new ServletHolder(new FetchStatisticDataServlet()), "/");
 
-        new Timer("statistic-collector", true).schedule(new StatisticCollectorTask(), 0, 60000);
+        statistics.startTimer(period);
     }
 
     public void addTimingFilter() {
@@ -71,27 +82,11 @@ public class HostedAdminStatsticContext extends Context {
 
     private class FetchStatisticDataServlet extends HttpServlet {
         @Override protected void doGet(HttpServletRequest req, HttpServletResponse resp) throws IOException {
-            List<Map<String, Object>> result = statistics;
-            synchronized (HostedAdminStatsticContext.this) {
-                statistics = new ArrayList<Map<String, Object>>();
+            Long toValue = getLongParameter(req, "clear");
+            if (toValue != null) {
+                statistics.purgeStatistics(toValue);
             }
-
-            new ObjectMapper().writer().writeValue(resp.getWriter(), result);
-        }
-    }
-
-    private class StatisticCollectorTask extends TimerTask {
-        @Override public void run() {
-            Map<String, Object> e = statisticFilter.aggregate();
-            log.info(e.toString());
-            synchronized (HostedAdminStatsticContext.this) {
-                if (statistics.size() > 2047) {
-                    while (statistics.size() > 1023) {
-                        log.warn("dropping statistic record " + statistics.remove(0));
-                    }
-                }
-                statistics.add(e);
-            }
+            statistics.writeJson(resp.getWriter());
         }
     }
 }
