@@ -7,12 +7,14 @@
 # Default-Stop:      0 1 6
 ### END INIT INFO
 
-HOME=$( readlink -f $( dirname $0  )/.. )
-cd $HOME
+function abspath() { pushd . > /dev/null; if [ -d "$1" ]; then cd "$1"; dirs -l +0; else cd "`dirname \"$1\"`"; cur_dir=`dirs -l +0`; if [ "$cur_dir" == "/" ]; then echo "$cur_dir`basename \"$1\"`"; else echo "$cur_dir/`basename \"$1\"`"; fi; fi; popd > /dev/null; }
 
+HOME=`abspath $( dirname $0  )/..`
+cd $HOME
+export NEO4J_HOME=$HOME
 TIMEOUT=20
 PID_FILE=$HOME/data/running.pid
-JAVA_OPTS="-server -Dorg.neo4j.server.properties=conf/neo4j-server.properties -Dlog4j.configuration=file:conf/log4j.properties -Djava.util.logging.config.file=conf/logging.properties"
+JAVA_OPTS="-server -Dorg.neo4j.server.properties=conf/neo4j-server.properties -Dlog4j.configuration=file:conf/log4j.properties -Djava.util.logging.config.file=conf/logging.properties -DNEO4J_HOME=$HOME"
 
 createenv() {
     CLASSPATH=""
@@ -22,9 +24,8 @@ createenv() {
 
     export CLASSPATH
 
-#echo Home: $HOME
 #echo JAVA_OPTS: $JAVA_OPTS
-# echo java $JAVA_OPTS org.neo4j.server.Bootstrapper
+#echo java $JAVA_OPTS org.neo4j.server.Bootstrapper
 
     if [  -e $PID_FILE ] ; then
         JPID=$( cat $PID_FILE )
