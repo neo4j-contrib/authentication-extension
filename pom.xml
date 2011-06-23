@@ -15,10 +15,9 @@
     <packaging>pom</packaging>
 
     <modules>
-        <module>hosting-extension</module>
         <module>authentication-extension</module>
+        <module>statistic-extension</module>
     </modules>
-
 
     <repositories>
         <repository>
