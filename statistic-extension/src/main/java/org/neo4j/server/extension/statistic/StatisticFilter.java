@@ -47,8 +47,18 @@ public class StatisticFilter implements Filter {
         try {
             chain.doFilter(request, response);
         } finally {
-            collector.update((nanoTime() - start) / 1000000.0, ((Response) response).getContentCount());
+            collector.update((nanoTime() - start) / 1000000.0, getResponseSize(response));
         }
+    }
+
+    private long getResponseSize(final ServletResponse response) {
+        if (response instanceof ServletResponseWrapper) {
+            return getResponseSize(((ServletResponseWrapper) response).getResponse());
+        }
+        if (response instanceof Response) {
+            return ((Response) response).getContentCount();
+        }
+        return 0;
     }
 
     @Override public void destroy() {
