@@ -146,7 +146,7 @@ public class TestAuthentification {
         Client client = Client.create();
         client.addFilter(new HTTPBasicAuthFilter("test", "pass"));
 
-        client.resource("http://localhost:7474/").get(String.class);
+        client.resource("http://localhost:7474/").accept("application/json").get(String.class);
         client.resource("http://localhost:7474/db/data").get(String.class);
 
         try {
@@ -188,7 +188,7 @@ public class TestAuthentification {
         Client client = Client.create();
         client.addFilter(new HTTPBasicAuthFilter("test", "pass"));
 
-        client.resource("http://localhost:7474/").get(String.class);
+        client.resource("http://localhost:7474/").accept("application/json").get(String.class);
         client.resource("http://localhost:7474/db/data").get(String.class);
 
         client.resource("http://localhost:7474/db/data/node").post(String.class);
