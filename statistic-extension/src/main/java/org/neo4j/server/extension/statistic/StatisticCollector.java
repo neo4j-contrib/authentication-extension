@@ -147,7 +147,6 @@ public class StatisticCollector extends TimerTask {
                     size.getAvgString(), size.getMinString(), size.getMaxString(), size.getSumString()));
         }
         w.write("</table>");
-        new ObjectMapper().writer().writeValue(w, records);
         return Response.status(OK).entity(w.toString()).build();
     }
 }
