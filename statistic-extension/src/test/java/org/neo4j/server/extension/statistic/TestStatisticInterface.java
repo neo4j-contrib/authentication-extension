@@ -20,17 +20,22 @@
 package org.neo4j.server.extension.statistic;
 
 import com.sun.jersey.api.client.Client;
+import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.server.NeoServerBootstrapper;
 
-import javax.ws.rs.core.MediaType;
 import java.io.File;
 import java.io.IOException;
 import java.net.URL;
+import java.util.List;
+import java.util.Map;
 
-import static junit.framework.Assert.assertTrue;
+import static java.lang.Math.max;
+import static java.lang.Math.min;
+import static javax.ws.rs.core.MediaType.APPLICATION_JSON_TYPE;
+import static org.junit.Assert.assertEquals;
 
 /**
  * @author tbaum
@@ -72,27 +77,37 @@ public class TestStatisticInterface {
     @Test public void testStatisticGathering() throws IOException, InterruptedException {
         final Client client = Client.create();
 
-        final String x1 = client.resource("http://localhost:7474/admin/statistic").get(String.class);
-        final String x2 = client.resource("http://localhost:7474/").accept(MediaType.APPLICATION_JSON_TYPE).get(String.class);
-        final String x3 = client.resource("http://localhost:7474/db/data/node/0").get(String.class);
-        final String x4 = client.resource("http://localhost:7474/db/data").get(String.class);
+        final String req1 = client.resource("http://localhost:7474/admin/statistic").get(String.class);
+        final String req2 = client.resource("http://localhost:7474/").accept(APPLICATION_JSON_TYPE).get(String.class);
+        final String req3 = client.resource("http://localhost:7474/db/data/node/0").get(String.class);
+        final String req4 = client.resource("http://localhost:7474/db/data").get(String.class);
 
         Thread.sleep(12000);
 
-        final String s = client.resource("http://localhost:7474/admin/statistic").get(String.class);
+        final String statisticInfo = client.resource("http://localhost:7474/admin/statistic")
+                .accept(APPLICATION_JSON_TYPE).get(String.class);
 
-        final int sum = x1.length() + x2.length() + x3.length() + x4.length();
-        final int min = x1.length();
-        final int max = x3.length();
-        System.err.println("================>"+s);
-        assertTrue("should contain requests:" + 4, s.contains("\"requests\":4"));
-        assertTrue("should contain sum:" + sum, s.contains("\"sum\":" + sum));
-        assertTrue("should contain min:" + min, s.contains("\"min\":" + min));
-        assertTrue("should contain max:" + max, s.contains("\"max\":" + max));
+        final int sum = req1.length() + req2.length() + req3.length() + req4.length();
+        final int min = min(min(req1.length(), req2.length()), min(req3.length(), req4.length()));
+        final int max = max(max(req1.length(), req2.length()), max(req3.length(), req4.length()));
 
-        final String x_rr = client.resource("http://localhost:7474/admin/statistic?clear=" + Long.MAX_VALUE).get(String.class);
+        @SuppressWarnings({"unchecked"}) List<Map> result = (List<Map>) new ObjectMapper().readValue(statisticInfo, Object.class);
 
-        assertTrue("should contain []", x_rr.contains("[]"));
+
+        System.err.println("================>" + statisticInfo);
+
+        final Map firstRecord = result.get(0);
+        final Map sizeMap = (Map) firstRecord.get("size");
+        assertEquals("should contain one statistic record", 1, result.size());
+        assertEquals("should contain requests:", 4, firstRecord.get("requests"));
+        assertEquals("should contain sum:", sum, sizeMap.get("sum"));
+        assertEquals("should contain min:", min, sizeMap.get("min"));
+        assertEquals("should contain max:", max, sizeMap.get("max"));
+
+        final String emptyStatisticInfo = client.resource("http://localhost:7474/admin/statistic?clear=" + Long.MAX_VALUE)
+                .accept(APPLICATION_JSON_TYPE).get(String.class);
+
+        assertEquals("should contain []", "[]", emptyStatisticInfo);
     }
 
 // -------------------------- INNER CLASSES --------------------------

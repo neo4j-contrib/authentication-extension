@@ -21,8 +21,10 @@ package org.neo4j.server.extension.statistic;
 
 import javax.ws.rs.GET;
 import javax.ws.rs.Path;
+import javax.ws.rs.Produces;
 import javax.ws.rs.QueryParam;
 import javax.ws.rs.core.Context;
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response;
 import java.io.IOException;
 
@@ -35,11 +37,19 @@ public class StatisticsResource {
         this.statistics = statistics;
     }
 
-    @GET
-    public Response addUserRo(@QueryParam("clear") Long clear) throws IOException {
+    @GET @Produces(MediaType.TEXT_HTML)
+    public Response asHtml(@QueryParam("clear") Long clear) throws IOException {
         if (clear != null) {
             statistics.purgeStatistics(clear);
         }
-        return statistics.createResponse();
+        return statistics.createHtmlResponse();
+    }
+
+    @GET @Produces(MediaType.APPLICATION_JSON)
+    public Response asJson(@QueryParam("clear") Long clear) throws IOException {
+        if (clear != null) {
+            statistics.purgeStatistics(clear);
+        }
+        return statistics.createJsonResponse();
     }
 }

@@ -90,19 +90,19 @@ public class StatisticData {
                 ? rounded.setScale(0) : rounded.doubleValue();
     }
 
-    @JsonProperty("avg") private Object getAvgString() {
+    @JsonProperty("avg") public Object getAvgString() {
         return format(getAvg());
     }
 
-    @JsonProperty("max") private Object getMaxString() {
+    @JsonProperty("max") public Object getMaxString() {
         return format(max);
     }
 
-    @JsonProperty("min") private Object getMinString() {
+    @JsonProperty("min") public Object getMinString() {
         return format(min);
     }
 
-    @JsonProperty("sum") private Object getSumString() {
+    @JsonProperty("sum") public Object getSumString() {
         return format(sum);
     }
 

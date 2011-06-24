@@ -27,6 +27,7 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.*;
 
+import static java.lang.String.format;
 import static javax.ws.rs.core.Response.Status.OK;
 
 /**
@@ -118,8 +119,34 @@ public class StatisticCollector extends TimerTask {
     /**
      * dump all records as json into writer
      */
-    public Response createResponse() throws IOException {
+    public Response createJsonResponse() throws IOException {
         final StringWriter w = new StringWriter();
+        new ObjectMapper().writer().writeValue(w, records);
+        return Response.status(OK).entity(w.toString()).build();
+    }
+
+    public Response createHtmlResponse() throws IOException {
+        final StringWriter w = new StringWriter();
+        w.write("<table>");
+
+        w.write("<tr>" +
+                "<th>Time</th><th>Request</th>" +
+                "<th>Duration Avg</th><th>Duration Min</th><th>Duration Max</th><th>Duration Sum</th>" +
+                "<th>Size Avg</th><th>Size Min</th><th>Size Max</th><th>Size Sum</th></tr>"
+        );
+        for (StatisticRecord record : records) {
+            final StatisticData size = record.getSize();
+            final StatisticData duration = record.getDuration();
+
+            w.write(format("<tr>" +
+                    "<td>%s</td><td>%s</td>" +
+                    "<td>%s</td><td>%s</td><td>%s</td><td>%s</td>" +
+                    "<td>%s</td><td>%s</td><td>%s</td><td>%s</td></tr>",
+                    new Date(record.getTimeStamp()), record.getRequests(),
+                    duration.getAvgString(), duration.getMinString(), duration.getMaxString(), duration.getSumString(),
+                    size.getAvgString(), size.getMinString(), size.getMaxString(), size.getSumString()));
+        }
+        w.write("</table>");
         new ObjectMapper().writer().writeValue(w, records);
         return Response.status(OK).entity(w.toString()).build();
     }
