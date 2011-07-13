@@ -1,4 +1,0 @@
-source :rubygems
-gem 'jruby-openssl'
-gem 'neo4j' #, :path => '/home/andreas/projects/neo4j'
-gem 'birdies-backend', :git => 'git://github.com/andreasronge/birdies-backend.git'   #:path => '/home/andreas/projects/birdies-backend'
