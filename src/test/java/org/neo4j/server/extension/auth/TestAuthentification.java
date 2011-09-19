@@ -26,14 +26,14 @@ import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import org.mortbay.jetty.Server;
-import org.neo4j.server.NeoServerBootstrapper;
-import org.neo4j.server.NeoServerWithEmbeddedWebServer;
+import org.neo4j.server.WrappingNeoServerBootstrapper;
+import org.neo4j.server.configuration.EmbeddedServerConfigurator;
+import org.neo4j.server.configuration.ThirdPartyJaxRsPackage;
+import org.neo4j.test.ImpermanentGraphDatabase;
 
 import javax.ws.rs.core.MultivaluedMap;
 import java.io.File;
 import java.io.IOException;
-import java.net.URL;
 
 import static junit.framework.Assert.assertEquals;
 import static junit.framework.Assert.fail;
@@ -43,13 +43,9 @@ import static junit.framework.Assert.fail;
  * @since 31.05.11 21:11
  */
 public class TestAuthentification {
-    private Server jetty;
     private File databaseDir;
     private File aclfile;
-
-    private NeoServerWithEmbeddedWebServer neoServer;
-    private String adminCred = "neo4j:master";
-    private TestBootstrapper testBootstrapper;
+    private WrappingNeoServerBootstrapper testBootstrapper;
 
     @Before
     public void setUp() throws Exception {
@@ -57,12 +53,15 @@ public class TestAuthentification {
         databaseDir = File.createTempFile("neo4j", "");
         databaseDir.delete();
         databaseDir.mkdirs();
-
         //TODO replace this!!
-        testBootstrapper = new TestBootstrapper();
+
+        ImpermanentGraphDatabase db = new ImpermanentGraphDatabase("target/db");
+
+        EmbeddedServerConfigurator config = new EmbeddedServerConfigurator(db);
+        config.configuration().setProperty("org.neo4j.server.credentials", "neo4j:master");
+        config.getThirdpartyJaxRsClasses().add(new ThirdPartyJaxRsPackage("org.neo4j.server.extension.auth", "/admin"));
+        testBootstrapper = new WrappingNeoServerBootstrapper(db, config);
         testBootstrapper.start();
-
-
     }
 
     @After
@@ -210,21 +209,5 @@ public class TestAuthentification {
         } catch (UniformInterfaceException e) {
             assertEquals("expecting responsecode 401", 401, e.getResponse().getStatus());
         }
-    }
-
-    public class TestBootstrapper extends NeoServerBootstrapper {
-        public TestBootstrapper() {
-            final URL resource = getClass().getResource("/test-neo4j-server.properties");
-            System.err.println(resource.getFile());
-            System.setProperty("org.neo4j.server.properties", resource.getFile());
-        }
-        /*
-     @Override protected Configurator getConfigurator() {
-         final Configurator configurator = super.getConfigurator();
-         configurator.configuration().setProperty(Configurator.DATABASE_LOCATION_PROPERTY_KEY, databaseDir.toString());
-               configurator.configuration().setProperty("org.neo4j.server.thirdparty_jaxrs_classes", "org.neo4j.server.extension.auth=/admin");
-               configurator.configuration().setProperty("org.neo4j.server.credentials", adminCred);
-               return configurator;
-     }   */
     }
 }

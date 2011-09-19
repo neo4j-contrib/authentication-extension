@@ -22,10 +22,10 @@ package org.neo4j.server.extension.auth;
 import org.apache.commons.configuration.Configuration;
 import org.mortbay.jetty.Server;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.kernel.AbstractGraphDatabase;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.NeoServerWithEmbeddedWebServer;
 import org.neo4j.server.configuration.Configurator;
-import org.neo4j.server.configuration.PropertyFileConfigurator;
 import org.neo4j.server.configuration.ThirdPartyJaxRsPackage;
 import org.neo4j.server.logging.Logger;
 import org.neo4j.server.plugins.Injectable;
@@ -38,7 +38,7 @@ import java.util.Collection;
 import static org.neo4j.server.plugins.TypedInjectable.injectable;
 
 public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
-
+    private static final String ACL_LOCATION_PROPERTY_KEY = "org.neo4j.server.authentification.acl-file";
     private static final Logger LOG = new Logger(AuthenticationExtensionInitializer.class);
 
     @Override
@@ -47,15 +47,6 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
     }
 
     public void stop() {
-    }
-
-    private File getAclConfigFile(final Configurator configurator) {
-        if (!(configurator instanceof PropertyFileConfigurator)) {
-            throw new RuntimeException("expecting configuration to be a PropertyFileConfigurator");
-        }
-        PropertyFileConfigurator propertyFileConfigurator = (PropertyFileConfigurator) configurator;
-
-        return new File(propertyFileConfigurator.getPropertyFileDirectory(), "db-acl.properties");
     }
 
     @Override
@@ -72,7 +63,7 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
         }
 
         final SingleUserAuthenticationService adminAuth = new SingleUserAuthenticationService(masterCredendials);
-        final File aclConfigFile = getAclConfigFile(configurator);
+        final File aclConfigFile = getAclFile(neoServer);
         final MultipleAuthenticationService users = new MultipleAuthenticationService(aclConfigFile);
 
         jetty.addLifeCycleListener(new AuthenticationStartupListner(
@@ -82,6 +73,25 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
                 new AuthenticationFilter(adminAuth, "neo4j-admin")));
 
         return Arrays.<Injectable<?>>asList(injectable(users));
+    }
+
+    private File getAclFile(NeoServer neoServer) {
+        AbstractGraphDatabase graph = neoServer.getDatabase().graph;
+        Configuration config = neoServer.getConfiguration();
+        return new File(config.getString(ACL_LOCATION_PROPERTY_KEY, getDefaultAclFile(graph)));
+    }
+
+    private String getDefaultAclFile(AbstractGraphDatabase db) {
+        return new File(db.getStoreDir(), "../conf/db-acl.properties").getAbsolutePath();
+    }
+
+    private Server getJetty(final NeoServer neoServer) {
+        if (neoServer instanceof NeoServerWithEmbeddedWebServer) {
+            final NeoServerWithEmbeddedWebServer server = (NeoServerWithEmbeddedWebServer) neoServer;
+            return server.getWebServer().getJetty();
+        } else {
+            throw new IllegalArgumentException("expected NeoServerWithEmbeddedWebServer");
+        }
     }
 
     private String getMyMountpoint(final Configurator configurator) {
@@ -94,15 +104,4 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
         }
         throw new RuntimeException("unable to resolve our mountpoint?");
     }
-
-
-    private Server getJetty(final NeoServer neoServer) {
-        if (neoServer instanceof NeoServerWithEmbeddedWebServer) {
-            final NeoServerWithEmbeddedWebServer server = (NeoServerWithEmbeddedWebServer) neoServer;
-            return server.getWebServer().getJetty();
-        } else {
-            throw new IllegalArgumentException("expected NeoServerWithEmbeddedWebServer");
-        }
-    }
-
 }
