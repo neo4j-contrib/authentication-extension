@@ -136,7 +136,7 @@ public class TestAuthentification {
         Client adminClient = Client.create();
         adminClient.addFilter(new HTTPBasicAuthFilter("neo4j", "master"));
 
-        MultivaluedMap formData = new MultivaluedMapImpl();
+        MultivaluedMap<String, String> formData = new MultivaluedMapImpl();
         formData.add("user", "test:pass");
 
         assertEquals("OK", adminClient.resource("http://localhost:7474/admin/add-user-ro").post(String.class, formData));
