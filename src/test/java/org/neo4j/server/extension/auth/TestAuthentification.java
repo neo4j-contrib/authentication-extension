@@ -43,19 +43,12 @@ import static junit.framework.Assert.fail;
  * @since 31.05.11 21:11
  */
 public class TestAuthentification {
-    private File databaseDir;
-    private File aclfile;
     private WrappingNeoServerBootstrapper testBootstrapper;
 
     @Before
     public void setUp() throws Exception {
-        aclfile = File.createTempFile("neo4j-acl", "");
-        databaseDir = File.createTempFile("neo4j", "");
-        databaseDir.delete();
-        databaseDir.mkdirs();
-        //TODO replace this!!
 
-        ImpermanentGraphDatabase db = new ImpermanentGraphDatabase("target/db");
+        ImpermanentGraphDatabase db = new ImpermanentGraphDatabase();
 
         EmbeddedServerConfigurator config = new EmbeddedServerConfigurator(db);
         config.configuration().setProperty("org.neo4j.server.credentials", "neo4j:master");
@@ -67,7 +60,6 @@ public class TestAuthentification {
     @After
     public void tearDown() {
         testBootstrapper.stop();
-        delete(databaseDir);
     }
 
     private void delete(final File dir) {
@@ -131,8 +123,6 @@ public class TestAuthentification {
     }
 
     @Test public void addRoAndRemoveUserTest() throws IOException, InterruptedException {
-        System.err.println(aclfile);
-
         Client adminClient = Client.create();
         adminClient.addFilter(new HTTPBasicAuthFilter("neo4j", "master"));
 
@@ -173,8 +163,6 @@ public class TestAuthentification {
     }
 
     @Test public void addRwAndRemoveUserTest() throws IOException, InterruptedException {
-        System.err.println(aclfile);
-
         Client adminClient = Client.create();
         adminClient.addFilter(new HTTPBasicAuthFilter("neo4j", "master"));
 

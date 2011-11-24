@@ -19,15 +19,14 @@
  */
 package org.neo4j.server.extension.auth;
 
-import org.apache.commons.configuration.ConfigurationException;
-import org.apache.commons.configuration.PropertiesConfiguration;
+import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.AbstractGraphDatabase;
 
-import java.io.File;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.Map;
-
-import static org.neo4j.helpers.collection.IteratorUtil.asIterable;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author tbaum
@@ -35,30 +34,41 @@ import static org.neo4j.helpers.collection.IteratorUtil.asIterable;
  */
 public class MultipleAuthenticationService implements AuthenticationService {
 
-    private final PropertiesConfiguration configuration;
-    private final File configFile;
+    private static final String CONFIG_PREFIX = "authentication-extension";
+    private static final Pattern USER_PATTERN = Pattern.compile(CONFIG_PREFIX + "\\.user\\.(.+)");
+    private final AbstractGraphDatabase graphDatabase;
 
-    public MultipleAuthenticationService(File configFile) {
-        this.configFile = configFile;
-        try {
-            this.configuration = new PropertiesConfiguration(configFile);
-        } catch (ConfigurationException e) {
-            throw new RuntimeException(e);
-        }
+    public MultipleAuthenticationService(AbstractGraphDatabase graphDatabase) {
+        this.graphDatabase = graphDatabase;
     }
 
     public boolean hasAccess(String method, final byte[] credentials) {
         final String cred = new String(credentials);
-        final String rights = configuration.getString(cred, "");
+        final String rights = getCredentials(cred);
 
-        return isVerb(method, "PUT", "POST", "DELETE") && rights.contains("w") ||
-                isVerb(method, "GET") && rights.contains("r");
+        return isVerb(method, "PUT", "POST", "DELETE") && rights.contains("W") ||
+                isVerb(method, "GET") && rights.contains("R");
     }
 
-    public Map<String, String> getUsers() {
-        final Map<String, String> result = new HashMap<String, String>();
-        for (String key : asIterable((Iterator<String>) configuration.getKeys())) {
-            result.put(key, configuration.getString(key));
+    private String getCredentials(String cred) {
+        PropertyContainer properties = graphDatabase.getKernelData().properties();
+        return (String) properties.getProperty(getUserKey(cred), "");
+    }
+
+    private String getUserKey(String cred) {
+        return CONFIG_PREFIX + ".user." + cred;
+    }
+
+    public Map<String, Permission> getUsers() {
+        final Map<String, Permission> result = new HashMap<String, Permission>();
+
+        PropertyContainer properties = graphDatabase.getKernelData().properties();
+        for (String key : properties.getPropertyKeys()) {
+            Matcher matcher = USER_PATTERN.matcher(key);
+            if (matcher.matches()) {
+                String value = (String) properties.getProperty(key);
+                result.put(matcher.group(1), Permission.valueOf(value));
+            }
         }
         return result;
     }
@@ -73,15 +83,20 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     public void setPermissionForUser(String user, Permission permission) {
-        if (permission == Permission.NONE) {
-            configuration.clearProperty(user);
-        } else {
-            configuration.setProperty(user, permission.name().toLowerCase());
-        }
+        Transaction transaction = graphDatabase.beginTx();
         try {
-            configuration.save(configFile);
-        } catch (ConfigurationException e) {
-            throw new RuntimeException(e);
+            PropertyContainer properties = graphDatabase.getKernelData().properties();
+            String key = getUserKey(user);
+            if (permission == Permission.NONE) {
+                properties.removeProperty(key);
+            } else {
+                properties.setProperty(key, permission.name());
+            }
+            transaction.success();
+        } catch (Exception e) {
+            transaction.failure();
+        } finally {
+            transaction.finish();
         }
     }
 
