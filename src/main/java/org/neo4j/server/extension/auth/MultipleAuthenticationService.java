@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
  */
 public class MultipleAuthenticationService implements AuthenticationService {
 
-    private static final String CONFIG_PREFIX = "authentication-extension";
+    private static final String CONFIG_PREFIX = MultipleAuthenticationService.class.getPackage().getName();
     private static final Pattern USER_PATTERN = Pattern.compile(CONFIG_PREFIX + "\\.user\\.(.+)");
     private final AbstractGraphDatabase graphDatabase;
 
