@@ -19,6 +19,10 @@
  */
 package org.neo4j.server.extension.auth;
 
+import org.neo4j.graphdb.PropertyContainer;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.AbstractGraphDatabase;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.regex.Matcher;
@@ -26,7 +30,7 @@ import java.util.regex.Pattern;
 
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.GraphDatabaseSPI;
+import org.neo4j.kernel.GraphDatabaseAPI;
 
 /**
  * @author tbaum
@@ -36,10 +40,10 @@ public class MultipleAuthenticationService implements AuthenticationService {
 
     private static final String CONFIG_PREFIX = MultipleAuthenticationService.class.getPackage().getName();
     private static final Pattern USER_PATTERN = Pattern.compile(CONFIG_PREFIX + "\\.user\\.(.+)");
-    private final GraphDatabaseSPI graphDatabase;
+    private final GraphDatabaseAPI graphDatabase;
 
-    public MultipleAuthenticationService(GraphDatabaseSPI graph) {
-        this.graphDatabase = graph;
+    public MultipleAuthenticationService(GraphDatabaseAPI graphDatabase) {
+        this.graphDatabase = graphDatabase;
     }
 
     public boolean hasAccess(String method, final byte[] credentials) {
