@@ -51,7 +51,7 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     private String getCredentials(String cred) {
-        PropertyContainer properties = graphDatabase.getKernelData().properties();
+        PropertyContainer properties = graphDatabase.getNodeManager().getGraphProperties();
         return (String) properties.getProperty(getUserKey(cred), "");
     }
 
