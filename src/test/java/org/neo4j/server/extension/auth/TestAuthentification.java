@@ -25,6 +25,7 @@ import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.neo4j.server.WrappingNeoServerBootstrapper;
 import org.neo4j.server.configuration.EmbeddedServerConfigurator;
@@ -73,7 +74,7 @@ public class TestAuthentification {
         }
     }
 
-    @Test public void expecting401() throws IOException, InterruptedException {
+    @Test @Ignore public void expecting401() throws IOException, InterruptedException {
         Client client = Client.create();
 
 
@@ -122,7 +123,7 @@ public class TestAuthentification {
         }
     }
 
-    @Test public void addRoAndRemoveUserTest() throws IOException, InterruptedException {
+    @Test @Ignore public void addRoAndRemoveUserTest() throws IOException, InterruptedException {
         Client adminClient = Client.create();
         adminClient.addFilter(new HTTPBasicAuthFilter("neo4j", "master"));
 
@@ -162,7 +163,7 @@ public class TestAuthentification {
         }
     }
 
-    @Test public void addRwAndRemoveUserTest() throws IOException, InterruptedException {
+    @Test @Ignore public void addRwAndRemoveUserTest() throws IOException, InterruptedException {
         Client adminClient = Client.create();
         adminClient.addFilter(new HTTPBasicAuthFilter("neo4j", "master"));
 

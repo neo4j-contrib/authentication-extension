@@ -19,9 +19,11 @@
  */
 package org.neo4j.server.extension.auth;
 
+import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.KernelData;
+import org.neo4j.kernel.impl.core.NodeManager;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -36,13 +38,17 @@ public class MultipleAuthenticationService implements AuthenticationService {
 
     private static final String CONFIG_PREFIX = MultipleAuthenticationService.class.getPackage().getName();
     private static final Pattern USER_PATTERN = Pattern.compile(CONFIG_PREFIX + "\\.user\\.(.+)");
-    private final GraphDatabaseAPI graphDatabase;
+    private final GraphDatabaseService graph;
+    private final NodeManager nodeManager;
+    private final KernelData kernelData;
 
-    public MultipleAuthenticationService(GraphDatabaseAPI graphDatabase) {
-        this.graphDatabase = graphDatabase;
+    public MultipleAuthenticationService(GraphDatabaseService graph, NodeManager nodeManager, KernelData kernelData) {
+        this.graph = graph;
+        this.nodeManager = nodeManager;
+        this.kernelData = kernelData;
     }
 
-    public boolean hasAccess(String method, final byte[] credentials) {
+    @Override public boolean hasAccess(String method, final byte[] credentials) {
         final String cred = new String(credentials);
         final String rights = getCredentials(cred);
 
@@ -51,7 +57,7 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     private String getCredentials(String cred) {
-        PropertyContainer properties = graphDatabase.getNodeManager().getGraphProperties();
+        PropertyContainer properties = nodeManager.getGraphProperties();
         return (String) properties.getProperty(getUserKey(cred), "");
     }
 
@@ -62,7 +68,7 @@ public class MultipleAuthenticationService implements AuthenticationService {
     public Map<String, Permission> getUsers() {
         final Map<String, Permission> result = new HashMap<String, Permission>();
 
-        PropertyContainer properties = graphDatabase.getKernelData().properties();
+        PropertyContainer properties = kernelData.properties();
         for (String key : properties.getPropertyKeys()) {
             Matcher matcher = USER_PATTERN.matcher(key);
             if (matcher.matches()) {
@@ -83,9 +89,9 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     public void setPermissionForUser(String user, Permission permission) {
-        Transaction transaction = graphDatabase.beginTx();
+        Transaction transaction = graph.beginTx();
         try {
-            PropertyContainer properties = graphDatabase.getKernelData().properties();
+            PropertyContainer properties = kernelData.properties();
             String key = getUserKey(user);
             if (permission == Permission.NONE) {
                 properties.removeProperty(key);
