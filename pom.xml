@@ -6,20 +6,20 @@
         <version>21</version>
     </parent>
 
-    <modelVersion>4.0.0</modelVersion>
-    <groupId>org.neo4j.server</groupId>
-    <artifactId>authentication-extension</artifactId>
-    <packaging>jar</packaging>
-    <version>1.7-SNAPSHOT</version>
-    <name>authentication-extension</name>
-
     <properties>
         <bundle.namespace>org.neo4j.server.authentication-extension</bundle.namespace>
 
         <!-- Jar Versions -->
-        <neo4j.version>1.7-SNAPSHOT</neo4j.version>
+        <neo4j.version>1.7</neo4j.version>
         <jersey.version>1.9</jersey.version>
     </properties>
+
+    <modelVersion>4.0.0</modelVersion>
+    <groupId>org.neo4j.server</groupId>
+    <artifactId>authentication-extension</artifactId>
+    <packaging>jar</packaging>
+    <version>${neo4j.version}-1.0-SNAPSHOT</version>
+    <name>authentication-extension</name>
 
     <build>
         <plugins>
