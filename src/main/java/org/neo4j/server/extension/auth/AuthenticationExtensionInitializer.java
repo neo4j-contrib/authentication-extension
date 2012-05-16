@@ -26,6 +26,7 @@ import org.neo4j.server.NeoServer;
 import org.neo4j.server.NeoServerWithEmbeddedWebServer;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.ThirdPartyJaxRsPackage;
+import org.neo4j.server.database.Database;
 import org.neo4j.server.logging.Logger;
 import org.neo4j.server.plugins.Injectable;
 import org.neo4j.server.plugins.SPIPluginLifecycle;
@@ -60,7 +61,9 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
         }
 
         final SingleUserAuthenticationService adminAuth = new SingleUserAuthenticationService(masterCredendials);
-        final MultipleAuthenticationService users = new MultipleAuthenticationService(neoServer.getDatabase().graph);
+        Database database = neoServer.getDatabase();
+        final MultipleAuthenticationService users = new MultipleAuthenticationService(database.graph,
+                database.graph.getNodeManager(), database.graph.getKernelData());
 
         jetty.addLifeCycleListener(new AuthenticationStartupListner(
                 jetty,
