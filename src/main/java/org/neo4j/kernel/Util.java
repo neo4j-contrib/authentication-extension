@@ -20,6 +20,7 @@
 package org.neo4j.kernel;
 
 import org.neo4j.kernel.impl.core.NodeManager;
+import org.neo4j.tooling.wrap.WrappedGraphDatabase;
 
 import java.lang.reflect.Field;
 
@@ -27,6 +28,12 @@ public class Util {
 
     public static NodeManager getNodeManager(AbstractGraphDatabase database) {
         try {
+            if (database instanceof WrappedGraphDatabase) {
+                Field graphdb = WrappedGraphDatabase.class.getDeclaredField("graphdb");
+                graphdb.setAccessible(true);
+                database = (AbstractGraphDatabase) graphdb.get(database);
+            }
+
 
             Field graphDbImpl = EmbeddedGraphDatabase.class.getDeclaredField("graphDbImpl");
             graphDbImpl.setAccessible(true);
