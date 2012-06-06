@@ -39,20 +39,31 @@ import static org.neo4j.server.plugins.TypedInjectable.injectable;
 
 public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
     private static final Logger LOG = new Logger(AuthenticationExtensionInitializer.class);
+    private AuthenticationFilter adminAuthenticationFilter;
+    private AuthenticationFilter authenticationFilter;
+    private WebServer webServer;
+    private String adminPath;
 
     @Override
     public Collection<Injectable<?>> start(final GraphDatabaseService graphDatabaseService, final Configuration config) {
         throw new IllegalAccessError();
     }
 
+    @Override
     public void stop() {
+        if (adminAuthenticationFilter != null) {
+            webServer.removeFilter(adminAuthenticationFilter, adminPath);
+        }
+        if (authenticationFilter != null) {
+            webServer.removeFilter(authenticationFilter, "/*");
+        }
     }
 
     @Override
     public Collection<Injectable<?>> start(final NeoServer neoServer) {
         LOG.info("START " + AuthenticationExtensionInitializer.class.toString());
 
-        WebServer webServer = getWebServer(neoServer);
+        webServer = getWebServer(neoServer);
         final Configurator configurator = neoServer.getConfigurator();
         final Configuration configuration = neoServer.getConfiguration();
 
@@ -67,8 +78,12 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
         final MultipleAuthenticationService users = new MultipleAuthenticationService(graphDatabaseAPI,
                 graphDatabaseAPI.getNodeManager(), graphDatabaseAPI.getKernelData());
 
-        webServer.addFilter(new AuthenticationFilter(users, "neo4j graphdb"), "/*");
-        webServer.addFilter(new AuthenticationFilter(adminAuth, "neo4j-admin"), getMyMountpoint(configurator) + "/*");
+        adminAuthenticationFilter = new AuthenticationFilter("neo4j-admin", adminAuth);
+        adminPath = getMyMountpoint(configurator) + "/*";
+        webServer.addFilter(adminAuthenticationFilter, adminPath);
+
+        authenticationFilter = new AuthenticationFilter("neo4j graphdb", users, adminAuth);
+        webServer.addFilter(authenticationFilter, "/*");
 
         return Arrays.<Injectable<?>>asList(injectable(users));
     }

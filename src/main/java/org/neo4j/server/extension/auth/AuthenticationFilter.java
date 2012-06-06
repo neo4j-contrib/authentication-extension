@@ -19,28 +19,22 @@
  */
 package org.neo4j.server.extension.auth;
 
-import java.io.IOException;
+import sun.misc.BASE64Decoder;
 
-import javax.servlet.Filter;
-import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
-import javax.servlet.ServletException;
-import javax.servlet.ServletRequest;
-import javax.servlet.ServletResponse;
+import javax.servlet.*;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
-import sun.misc.BASE64Decoder;
+import java.io.IOException;
 
 /**
  * @author tbaum
  * @since 23.01.11
  */
 public class AuthenticationFilter implements Filter {
-    private final AuthenticationService authenticationService;
+    private final AuthenticationService[] authenticationService;
     private final String realmName;
 
-    public AuthenticationFilter(final AuthenticationService authenticationService, final String realmName) {
+    public AuthenticationFilter(final String realmName, final AuthenticationService... authenticationService) {
         this.authenticationService = authenticationService;
         this.realmName = realmName;
     }
@@ -76,7 +70,12 @@ public class AuthenticationFilter implements Filter {
 
         final String encoded = header.substring(header.indexOf(" ") + 1);
         byte[] credentials = new BASE64Decoder().decodeBuffer(encoded);
-        return authenticationService.hasAccess(method, credentials);
+        for (AuthenticationService service : authenticationService) {
+            if (service.hasAccess(method, credentials)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private void sendAuthHeader(HttpServletResponse response) throws IOException {
