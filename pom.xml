@@ -1,16 +1,16 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
     <parent>
-        <groupId>org.neo4j</groupId>
+        <groupId>org.neo4j.build</groupId>
         <artifactId>parent-pom</artifactId>
-        <version>21</version>
+        <version>35</version>
     </parent>
 
     <properties>
         <bundle.namespace>org.neo4j.server.authentication-extension</bundle.namespace>
 
         <!-- Jar Versions -->
-        <neo4j.version>1.7</neo4j.version>
+        <neo4j.version>1.8-SNAPSHOT</neo4j.version>
         <jersey.version>1.9</jersey.version>
     </properties>
 
