@@ -21,6 +21,7 @@ package org.neo4j.server.extension.auth;
 
 import org.apache.commons.configuration.Configuration;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.kernel.GraphDatabaseAPI;
 import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.NeoServer;
 import org.neo4j.server.configuration.Configurator;
@@ -62,8 +63,9 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
 
         final SingleUserAuthenticationService adminAuth = new SingleUserAuthenticationService(masterCredendials);
         Database database = neoServer.getDatabase();
-        final MultipleAuthenticationService users = new MultipleAuthenticationService(database.graph,
-                database.graph.getNodeManager(), database.graph.getKernelData());
+        GraphDatabaseAPI graphDatabaseAPI = database.getGraph();
+        final MultipleAuthenticationService users = new MultipleAuthenticationService(graphDatabaseAPI,
+                graphDatabaseAPI.getNodeManager(), graphDatabaseAPI.getKernelData());
 
         webServer.addFilter(new AuthenticationFilter(users, "neo4j graphdb"), "/*");
         webServer.addFilter(new AuthenticationFilter(adminAuth, "neo4j-admin"), getMyMountpoint(configurator) + "/*");
