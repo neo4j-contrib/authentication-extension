@@ -20,16 +20,16 @@
 package org.neo4j.server.extension.auth;
 
 import org.apache.commons.configuration.Configuration;
-import org.mortbay.jetty.Server;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.NeoServerWithEmbeddedWebServer;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.ThirdPartyJaxRsPackage;
 import org.neo4j.server.database.Database;
 import org.neo4j.server.logging.Logger;
 import org.neo4j.server.plugins.Injectable;
 import org.neo4j.server.plugins.SPIPluginLifecycle;
+import org.neo4j.server.web.WebServer;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -51,7 +51,7 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
     public Collection<Injectable<?>> start(final NeoServer neoServer) {
         LOG.info("START " + AuthenticationExtensionInitializer.class.toString());
 
-        final Server jetty = getJetty(neoServer);
+        WebServer webServer = getWebServer(neoServer);
         final Configurator configurator = neoServer.getConfigurator();
         final Configuration configuration = neoServer.getConfiguration();
 
@@ -65,22 +65,17 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
         final MultipleAuthenticationService users = new MultipleAuthenticationService(database.graph,
                 database.graph.getNodeManager(), database.graph.getKernelData());
 
-        jetty.addLifeCycleListener(new AuthenticationStartupListner(
-                jetty,
-                new AuthenticationFilter(users, "neo4j graphdb"),
-                getMyMountpoint(configurator),
-                new AuthenticationFilter(adminAuth, "neo4j-admin")));
+        webServer.addFilter(new AuthenticationFilter(users, "neo4j graphdb"), "/*");
+        webServer.addFilter(new AuthenticationFilter(adminAuth, "neo4j-admin"), getMyMountpoint(configurator) + "/*");
 
         return Arrays.<Injectable<?>>asList(injectable(users));
     }
 
-    private Server getJetty(final NeoServer neoServer) {
-        if (neoServer instanceof NeoServerWithEmbeddedWebServer) {
-            final NeoServerWithEmbeddedWebServer server = (NeoServerWithEmbeddedWebServer) neoServer;
-            return server.getWebServer().getJetty();
-        } else {
-            throw new IllegalArgumentException("expected NeoServerWithEmbeddedWebServer");
+    private WebServer getWebServer(final NeoServer neoServer) {
+        if (neoServer instanceof AbstractNeoServer) {
+            return ((AbstractNeoServer) neoServer).getWebServer();
         }
+        throw new IllegalArgumentException("expected AbstractNeoServer");
     }
 
     private String getMyMountpoint(final Configurator configurator) {
