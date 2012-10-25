@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2002-2011 "Neo Technology,"
+ * Copyright (c) 2002-2012 "Neo Technology,"
  * Network Engine for Objects in Lund AB [http://neotechnology.com]
  *
  * This file is part of Neo4j.
@@ -20,15 +20,17 @@
 package org.neo4j.server.extension.auth;
 
 import org.apache.commons.configuration.Configuration;
-import org.mortbay.jetty.Server;
 import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.server.AbstractNeoServer;
 import org.neo4j.server.NeoServer;
-import org.neo4j.server.NeoServerWithEmbeddedWebServer;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.ThirdPartyJaxRsPackage;
+import org.neo4j.server.database.Database;
 import org.neo4j.server.logging.Logger;
 import org.neo4j.server.plugins.Injectable;
 import org.neo4j.server.plugins.SPIPluginLifecycle;
+import org.neo4j.server.web.WebServer;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -37,20 +39,31 @@ import static org.neo4j.server.plugins.TypedInjectable.injectable;
 
 public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
     private static final Logger LOG = new Logger(AuthenticationExtensionInitializer.class);
+    private AuthenticationFilter adminAuthenticationFilter;
+    private AuthenticationFilter authenticationFilter;
+    private WebServer webServer;
+    private String adminPath;
 
     @Override
     public Collection<Injectable<?>> start(final GraphDatabaseService graphDatabaseService, final Configuration config) {
         throw new IllegalAccessError();
     }
 
+    @Override
     public void stop() {
+        if (adminAuthenticationFilter != null) {
+            webServer.removeFilter(adminAuthenticationFilter, adminPath);
+        }
+        if (authenticationFilter != null) {
+            webServer.removeFilter(authenticationFilter, "/*");
+        }
     }
 
     @Override
     public Collection<Injectable<?>> start(final NeoServer neoServer) {
         LOG.info("START " + AuthenticationExtensionInitializer.class.toString());
 
-        final Server jetty = getJetty(neoServer);
+        webServer = getWebServer(neoServer);
         final Configurator configurator = neoServer.getConfigurator();
         final Configuration configuration = neoServer.getConfiguration();
 
@@ -60,24 +73,26 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
         }
 
         final SingleUserAuthenticationService adminAuth = new SingleUserAuthenticationService(masterCredendials);
-        final MultipleAuthenticationService users = new MultipleAuthenticationService(neoServer.getDatabase().graph);
+        Database database = neoServer.getDatabase();
+        GraphDatabaseAPI graphDatabaseAPI = database.getGraph();
+        final MultipleAuthenticationService users = new MultipleAuthenticationService(graphDatabaseAPI,
+                graphDatabaseAPI.getNodeManager(), graphDatabaseAPI.getKernelData());
 
-        jetty.addLifeCycleListener(new AuthenticationStartupListner(
-                jetty,
-                new AuthenticationFilter(users, "neo4j graphdb"),
-                getMyMountpoint(configurator),
-                new AuthenticationFilter(adminAuth, "neo4j-admin")));
+        adminAuthenticationFilter = new AuthenticationFilter("neo4j-admin", adminAuth);
+        adminPath = getMyMountpoint(configurator) + "/*";
+        webServer.addFilter(adminAuthenticationFilter, adminPath);
+
+        authenticationFilter = new AuthenticationFilter("neo4j graphdb", users, adminAuth);
+        webServer.addFilter(authenticationFilter, "/*");
 
         return Arrays.<Injectable<?>>asList(injectable(users));
     }
 
-    private Server getJetty(final NeoServer neoServer) {
-        if (neoServer instanceof NeoServerWithEmbeddedWebServer) {
-            final NeoServerWithEmbeddedWebServer server = (NeoServerWithEmbeddedWebServer) neoServer;
-            return server.getWebServer().getJetty();
-        } else {
-            throw new IllegalArgumentException("expected NeoServerWithEmbeddedWebServer");
+    private WebServer getWebServer(final NeoServer neoServer) {
+        if (neoServer instanceof AbstractNeoServer) {
+            return ((AbstractNeoServer) neoServer).getWebServer();
         }
+        throw new IllegalArgumentException("expected AbstractNeoServer");
     }
 
     private String getMyMountpoint(final Configurator configurator) {
