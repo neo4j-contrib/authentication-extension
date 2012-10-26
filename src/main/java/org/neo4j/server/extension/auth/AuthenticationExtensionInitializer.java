@@ -76,7 +76,7 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
         Database database = neoServer.getDatabase();
         GraphDatabaseAPI graphDatabaseAPI = database.getGraph();
         final MultipleAuthenticationService users = new MultipleAuthenticationService(graphDatabaseAPI,
-                graphDatabaseAPI.getNodeManager(), graphDatabaseAPI.getKernelData());
+                graphDatabaseAPI.getNodeManager());
 
         adminAuthenticationFilter = new AuthenticationFilter("neo4j-admin", adminAuth);
         adminPath = getMyMountpoint(configurator) + "/*";

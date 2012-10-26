@@ -41,13 +41,13 @@ public class TestAuthenticationService {
 
     @Before public void setup() {
         graphDatabase = new ImpermanentGraphDatabase();
-        service = new MultipleAuthenticationService(graphDatabase, graphDatabase.getNodeManager(), graphDatabase.getKernelData());
+        service = new MultipleAuthenticationService(graphDatabase, graphDatabase.getNodeManager());
     }
 
     @Test public void testUserAddRemove() {
         service.setPermissionForUser("user1", RO);
 
-        PropertyContainer properties = graphDatabase.getKernelData().properties();
+        PropertyContainer properties = graphDatabase.getNodeManager().getGraphProperties();
         Transaction transaction = graphDatabase.beginTx();
         properties.setProperty("any other property", "should be ignored");
         transaction.success();

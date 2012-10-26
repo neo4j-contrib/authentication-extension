@@ -22,7 +22,6 @@ package org.neo4j.server.extension.auth;
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
-import org.neo4j.kernel.KernelData;
 import org.neo4j.kernel.impl.core.NodeManager;
 
 import java.util.HashMap;
@@ -40,12 +39,10 @@ public class MultipleAuthenticationService implements AuthenticationService {
     private static final Pattern USER_PATTERN = Pattern.compile(CONFIG_PREFIX + "\\.user\\.(.+)");
     private final GraphDatabaseService graph;
     private final NodeManager nodeManager;
-    private final KernelData kernelData;
 
-    public MultipleAuthenticationService(GraphDatabaseService graph, NodeManager nodeManager, KernelData kernelData) {
+    public MultipleAuthenticationService(GraphDatabaseService graph, NodeManager nodeManager) {
         this.graph = graph;
         this.nodeManager = nodeManager;
-        this.kernelData = kernelData;
     }
 
     @Override public boolean hasAccess(String method, final byte[] credentials) {
@@ -68,7 +65,7 @@ public class MultipleAuthenticationService implements AuthenticationService {
     public Map<String, Permission> getUsers() {
         final Map<String, Permission> result = new HashMap<String, Permission>();
 
-        PropertyContainer properties = kernelData.properties();
+        PropertyContainer properties = nodeManager.getGraphProperties();
         for (String key : properties.getPropertyKeys()) {
             Matcher matcher = USER_PATTERN.matcher(key);
             if (matcher.matches()) {
@@ -91,7 +88,7 @@ public class MultipleAuthenticationService implements AuthenticationService {
     public void setPermissionForUser(String user, Permission permission) {
         Transaction transaction = graph.beginTx();
         try {
-            PropertyContainer properties = kernelData.properties();
+            PropertyContainer properties = nodeManager.getGraphProperties();
             String key = getUserKey(user);
             if (permission == Permission.NONE) {
                 properties.removeProperty(key);
