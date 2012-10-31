@@ -20,6 +20,7 @@
 package org.neo4j.server.extension.auth;
 
 import com.sun.jersey.api.client.Client;
+import com.sun.jersey.api.client.ClientResponse;
 import com.sun.jersey.api.client.UniformInterfaceException;
 import com.sun.jersey.api.client.filter.HTTPBasicAuthFilter;
 import com.sun.jersey.core.util.MultivaluedMapImpl;
@@ -31,6 +32,7 @@ import org.neo4j.server.configuration.ServerConfigurator;
 import org.neo4j.server.configuration.ThirdPartyJaxRsPackage;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
+import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.MultivaluedMap;
 import java.io.File;
 import java.io.IOException;
@@ -44,6 +46,18 @@ import static junit.framework.Assert.fail;
  */
 public class TestAuthentification {
     private WrappingNeoServerBootstrapper testBootstrapper;
+    private final Client client = createClient();
+
+    private Client createClient() {
+        return Client.create();
+    }
+
+    private ClientResponse response;
+    private final Client adminClient = createClient();
+
+    {
+        adminClient.addFilter(new HTTPBasicAuthFilter("neo4j", "master"));
+    }
 
     @Before
     public void setUp() throws Exception {
@@ -57,8 +71,10 @@ public class TestAuthentification {
         testBootstrapper.start();
     }
 
+
     @After
     public void tearDown() {
+        if (response!=null) response.close();
         testBootstrapper.stop();
     }
 
@@ -73,10 +89,25 @@ public class TestAuthentification {
         }
     }
 
+    @Test
+    public void listNoUsers() throws Exception {
+        response = adminClient.resource("http://localhost:7474/admin/list").accept(MediaType.APPLICATION_JSON_TYPE).get(ClientResponse.class);
+        assertEquals(200, response.getStatus());
+        final String content = response.getEntity(String.class);
+        assertEquals("{}", content);
+    }
+
+    @Test
+    public void listAddedUsers() throws Exception {
+        addUser("test-rw","pass",true);
+        addUser("test-ro","pass",false);
+        response = adminClient.resource("http://localhost:7474/admin/list").accept(MediaType.APPLICATION_JSON_TYPE).get(ClientResponse.class);
+        assertEquals(200, response.getStatus());
+        final String content = response.getEntity(String.class);
+        assertEquals("{\"test-ro:pass\":\"RO\",\"test-rw:pass\":\"RW\"}", content);
+    }
+
     @Test public void expecting401() throws IOException, InterruptedException {
-        Client client = Client.create();
-
-
         try {
             client.resource("http://localhost:7474/").get(String.class);
             fail();
@@ -122,17 +153,23 @@ public class TestAuthentification {
         }
     }
 
-    @Test public void addRoAndRemoveUserTest() throws IOException, InterruptedException {
-        Client adminClient = Client.create();
-        adminClient.addFilter(new HTTPBasicAuthFilter("neo4j", "master"));
-
+    private String addUser(final String user, String pass, boolean rw) {
         MultivaluedMap<String, String> formData = new MultivaluedMapImpl();
-        formData.add("user", "test:pass");
+        formData.add("user", user+":"+pass);
+        return adminClient.resource("http://localhost:7474/admin/add-user-"+(rw?"rw":"ro")).post(String.class, formData);
+    }
 
-        assertEquals("OK", adminClient.resource("http://localhost:7474/admin/add-user-ro").post(String.class, formData));
+    private String removeUser(final String user, String pass) {
+        MultivaluedMap<String, String> formData = new MultivaluedMapImpl();
+        formData.add("user", user+":"+pass);
+        return adminClient.resource("http://localhost:7474/admin/remove-user").post(String.class, formData);
+    }
 
+    @Test public void addRoAndRemoveUserTest() throws IOException, InterruptedException {
+        
+        assertEquals("OK", addUser("test","pass",false));
 
-        Client client = Client.create();
+        Client client = createClient();
         client.addFilter(new HTTPBasicAuthFilter("test", "pass"));
 
         client.resource("http://localhost:7474/").accept("application/json").get(String.class);
@@ -145,7 +182,7 @@ public class TestAuthentification {
             assertEquals("expecting responsecode 401", 401, e.getResponse().getStatus());
         }
 
-        assertEquals("OK", adminClient.resource("http://localhost:7474/admin/remove-user").post(String.class, formData));
+        assertEquals("OK", removeUser("test","pass"));
 
         try {
             client.resource("http://localhost:7474/db/data/node").get(String.class);
@@ -163,7 +200,7 @@ public class TestAuthentification {
     }
 
     @Test public void addRwAndRemoveUserTest() throws IOException, InterruptedException {
-        Client adminClient = Client.create();
+        Client adminClient = createClient();
         adminClient.addFilter(new HTTPBasicAuthFilter("neo4j", "master"));
 
         MultivaluedMap<String, String> formData = new MultivaluedMapImpl();
@@ -172,7 +209,7 @@ public class TestAuthentification {
         assertEquals("OK", adminClient.resource("http://localhost:7474/admin/add-user-rw").post(String.class, formData));
 
 
-        Client client = Client.create();
+        Client client = createClient();
         client.addFilter(new HTTPBasicAuthFilter("test", "pass"));
 
         client.resource("http://localhost:7474/").accept("application/json").get(String.class);

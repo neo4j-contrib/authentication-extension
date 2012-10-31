@@ -10,6 +10,8 @@ Manage the credentials by sending requests to the `http://server:port/auth` endp
 ## List existing users
 
     GET http://server:port/auth/list
+
+    returns data in the form {"user:pass":"RW", "user2:pass2":"RO"}
     
 ## Adding users with form-param: user=username:password
 

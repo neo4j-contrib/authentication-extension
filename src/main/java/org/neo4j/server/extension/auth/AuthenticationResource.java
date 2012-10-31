@@ -19,12 +19,13 @@
  */
 package org.neo4j.server.extension.auth;
 
-import javax.ws.rs.FormParam;
-import javax.ws.rs.GET;
-import javax.ws.rs.POST;
-import javax.ws.rs.Path;
+import org.codehaus.jackson.map.ObjectMapper;
+
+import javax.ws.rs.*;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
+
+import java.io.IOException;
 
 import static javax.ws.rs.core.Response.Status.OK;
 import static org.neo4j.server.extension.auth.MultipleAuthenticationService.Permission.*;
@@ -32,6 +33,7 @@ import static org.neo4j.server.extension.auth.MultipleAuthenticationService.Perm
 @Path("/")
 public class AuthenticationResource {
 
+    private final static ObjectMapper mapper = new ObjectMapper();
     private final MultipleAuthenticationService users;
 
     public AuthenticationResource(@Context MultipleAuthenticationService users) {
@@ -39,8 +41,9 @@ public class AuthenticationResource {
     }
 
     @GET @Path("/list")
-    public Response listUsers() {
-        return Response.status(OK).entity(users.getUsers()).build();
+    public Response listUsers() throws IOException {
+        final String result = mapper.writeValueAsString(users.getUsers());
+        return Response.status(OK).entity(result).build();
     }
 
     @POST @Path("/add-user-ro")
