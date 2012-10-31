@@ -1,0 +1,9 @@
+Package: [[name]]1.8
+Version: [[version]]
+Section: misc
+Priority: optional
+Architecture: all
+Depends: default-jdk
+Maintainer: Neo4j Admins <admins@neo4j.org>
+Description: authentication extension for Neo4j
+Distribution: development
