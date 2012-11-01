@@ -18,7 +18,7 @@
     <groupId>org.neo4j.server</groupId>
     <artifactId>authentication-extension</artifactId>
     <packaging>jar</packaging>
-    <version>${neo4j.version}</version>
+    <version>1.8-SNAPSHOT</version>
     <name>authentication-extension</name>
 
     <build>
@@ -59,6 +59,7 @@
                             <goal>jdeb</goal>
                         </goals>
                         <configuration>
+                            <timestamped>true</timestamped>
                             <dataSet>
                                 <data>
                                     <src>${project.build.directory}/${project.build.finalName}.jar</src>
