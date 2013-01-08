@@ -17,11 +17,11 @@ end
 
 task :package do
   rm_rf %W(target/deb target/#{DEB_NAME}.deb target/#{DEB_NAME_VERSION}.deb)
-  mkdir_p %w(target/deb/usr/share/java)
+  mkdir_p 'target/deb/usr/share/neo4j-1.9/plugins'
 
-  cp %w(target/authentication-extension-1.9-SNAPSHOT-1.0-SNAPSHOT.jar), 'target/deb/usr/share/java'
+  sh 'cd target/deb/usr/share/neo4j-1.9/plugins && unzip ../../../../../authentication-extension-1.9-SNAPSHOT-1.0-SNAPSHOT-server-plugin.zip'
   sh 'find target/deb -name .DS_Store -delete'
-  deps = %w( )
+  deps = %w( neo4j-cloud-1.9 )
   sh "fpm -v #{version} -s dir -t deb -n #{DEB_NAME} -m admins@neotechnology.com #{deps.collect { |d| " -d #{d}" }} --deb-user 0 --deb-group 0 "+
          "-p target/#{DEB_NAME_VERSION}.deb --post-install package/post-install.sh --pre-uninstall package/pre-uninstall.sh -C target/deb ."
   sh "cp target/#{DEB_NAME_VERSION}.deb target/#{DEB_NAME}.deb"
