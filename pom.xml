@@ -10,7 +10,7 @@
         <bundle.namespace>org.neo4j.server.authentication-extension</bundle.namespace>
 
         <!-- Jar Versions -->
-        <neo4j.version>1.8</neo4j.version>
+        <neo4j.version>1.8.1</neo4j.version>
         <jersey.version>1.9</jersey.version>
     </properties>
 
@@ -18,7 +18,7 @@
     <groupId>org.neo4j.server</groupId>
     <artifactId>authentication-extension</artifactId>
     <packaging>jar</packaging>
-    <version>1.8-SNAPSHOT</version>
+    <version>${neo4j.version}-1.0-SNAPSHOT</version>
     <name>authentication-extension</name>
 
     <build>
@@ -47,32 +47,6 @@
                   <target>1.6</target>
                   <encoding>UTF-8</encoding>
                 </configuration>
-            </plugin>
-            <plugin>
-                <artifactId>jdeb</artifactId>
-                <groupId>org.vafer</groupId>
-                <version>0.11</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>jdeb</goal>
-                        </goals>
-                        <configuration>
-                            <timestamped>true</timestamped>
-                            <dataSet>
-                                <data>
-                                    <src>${project.build.directory}/${project.build.finalName}.jar</src>
-                                    <type>file</type>
-                                    <mapper>
-                                        <type>perm</type>
-                                        <prefix>/usr/share/java</prefix>
-                                    </mapper>
-                                </data>
-                            </dataSet>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
         </plugins>
     </build>
