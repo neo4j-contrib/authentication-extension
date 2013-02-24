@@ -41,7 +41,7 @@ public class TestAuthenticationService {
 
     @Before public void setup() {
         graphDatabase = new ImpermanentGraphDatabase();
-        service = new MultipleAuthenticationService(graphDatabase, graphDatabase.getNodeManager());
+        service = new MultipleAuthenticationService(graphDatabase);
     }
 
     @Test public void testUserAddRemove() {
