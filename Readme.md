@@ -33,3 +33,8 @@ Manage the credentials by sending POST requests to the `http://server:port/auth`
     curl --user username:password -d "user=username2:password2" http://localhost:7474/auth/remove-user
 
     returns "OK" on success
+
+## Download precompiled jars
+
+* http://dist.neo4j.org.s3.amazonaws.com/authentication-extension/authentication-extension-1.8.1-1.0-SNAPSHOT-server-plugin.zip
+* http://dist.neo4j.org.s3.amazonaws.com/authentication-extension/authentication-extension-1.8.1-1.0-SNAPSHOT.jar
