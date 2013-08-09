@@ -38,3 +38,4 @@ Manage the credentials by sending POST requests to the `http://server:port/auth`
 
 * [authentication-extension-1.9-SNAPSHOT-1.0-SNAPSHOT.jar](http://dist.neo4j.org.s3.amazonaws.com/authentication-extension/authentication-extension-1.9-SNAPSHOT-1.0-SNAPSHOT.jar)
 * [authentication-extension-1.9-SNAPSHOT-1.0-SNAPSHOT-server-plugin.zip](http://dist.neo4j.org.s3.amazonaws.com/authentication-extension/authentication-extension-1.9-SNAPSHOT-1.0-SNAPSHOT-server-plugin.zip)
+* [authentication-extension-2.0-M04-1.0-SNAPSHOT-server-plugin.zip](http://dist.neo4j.org.s3.amazonaws.com/authentication-extension/authentication-extension-2.0-M04-1.0-SNAPSHOT-server-plugin.zip)

@@ -66,7 +66,7 @@ public class TestAuthentification {
 
         ServerConfigurator config = new ServerConfigurator(db);
         config.configuration().setProperty("org.neo4j.server.credentials", "neo4j:master");
-        config.getThirdpartyJaxRsClasses().add(new ThirdPartyJaxRsPackage("org.neo4j.server.extension.auth", "/admin"));
+        config.getThirdpartyJaxRsPackages().add(new ThirdPartyJaxRsPackage("org.neo4j.server.extension.auth", "/admin"));
         testBootstrapper = new WrappingNeoServerBootstrapper(db, config);
         testBootstrapper.start();
     }

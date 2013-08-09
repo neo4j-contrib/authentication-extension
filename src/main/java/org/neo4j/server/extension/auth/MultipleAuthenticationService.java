@@ -22,6 +22,7 @@ package org.neo4j.server.extension.auth;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
 import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.kernel.impl.core.GraphPropertiesImpl;
 import org.neo4j.kernel.impl.core.NodeManager;
 
 import java.util.HashMap;
@@ -52,13 +53,20 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     private String getCredentials(String cred) {
-        PropertyContainer properties = getGraphProperties();
-        return (String) properties.getProperty(getUserKey(cred), "");
+        Transaction tx = graph.beginTx();
+        try {
+            PropertyContainer properties = getGraphProperties();
+            String credentials = (String) properties.getProperty(getUserKey(cred), "");
+            tx.success();
+            return credentials;
+        } finally {
+            tx.finish();
+        }
     }
 
     private PropertyContainer getGraphProperties() {
-        NodeManager nodeManager = graph.getDependencyResolver().resolveDependency(NodeManager.class);
-        return nodeManager.getGraphProperties();
+            NodeManager nodeManager = graph.getDependencyResolver().resolveDependency(NodeManager.class);
+            return nodeManager.getGraphProperties();
     }
 
     private String getUserKey(String cred) {
@@ -66,17 +74,23 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     public Map<String, Permission> getUsers() {
-        final Map<String, Permission> result = new HashMap<String, Permission>();
+        Transaction tx = graph.beginTx();
+        try {
+            final Map<String, Permission> result = new HashMap<String, Permission>();
 
-        PropertyContainer properties = getGraphProperties();
-        for (String key : properties.getPropertyKeys()) {
-            Matcher matcher = USER_PATTERN.matcher(key);
-            if (matcher.matches()) {
-                String value = (String) properties.getProperty(key);
-                result.put(matcher.group(1), Permission.valueOf(value));
+            PropertyContainer properties = getGraphProperties();
+            for (String key : properties.getPropertyKeys()) {
+                Matcher matcher = USER_PATTERN.matcher(key);
+                if (matcher.matches()) {
+                    String value = (String) properties.getProperty(key);
+                    result.put(matcher.group(1), Permission.valueOf(value));
+                }
             }
+            tx.success();
+            return result;
+        } finally {
+            tx.finish();
         }
-        return result;
     }
 
     private boolean isVerb(String method, final String... verbs) {

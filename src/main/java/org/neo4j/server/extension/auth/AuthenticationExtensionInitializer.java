@@ -35,7 +35,7 @@ import org.neo4j.server.web.WebServer;
 import java.util.Arrays;
 import java.util.Collection;
 
-import static org.neo4j.server.plugins.TypedInjectable.injectable;
+import static org.neo4j.server.extension.auth.TypedInjectable.injectable;
 
 public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
     private static final Logger LOG = new Logger(AuthenticationExtensionInitializer.class);
@@ -97,7 +97,7 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
     private String getMyMountpoint(final Configurator configurator) {
         final String packageName = getClass().getPackage().getName();
 
-        for (ThirdPartyJaxRsPackage o : configurator.getThirdpartyJaxRsClasses()) {
+        for (ThirdPartyJaxRsPackage o : configurator.getThirdpartyJaxRsPackages()) {
             if (o.getPackageName().equals(packageName)) {
                 return o.getMountPoint();
             }
