@@ -97,7 +97,7 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
     private String getMyMountpoint(final Configurator configurator) {
         final String packageName = getClass().getPackage().getName();
 
-        for (ThirdPartyJaxRsPackage o : configurator.getThirdpartyJaxRsClasses()) {
+        for (ThirdPartyJaxRsPackage o : configurator.getThirdpartyJaxRsPackages()) {
             if (o.getPackageName().equals(packageName)) {
                 return o.getMountPoint();
             }
