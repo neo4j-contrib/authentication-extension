@@ -53,14 +53,14 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     private String getCredentials(String cred) {
-        Transaction tx = graph.beginTx();
-        try {
+    	String credentials = "";
+        try (Transaction tx = graph.beginTx()) {
             PropertyContainer properties = getGraphProperties();
-            String credentials = (String) properties.getProperty(getUserKey(cred), "");
+            if (properties.hasProperty(getUserKey(cred))) {
+	           credentials = (String) properties.getProperty(getUserKey(cred));
+            }
             tx.success();
             return credentials;
-        } finally {
-            tx.finish();
         }
     }
 
@@ -74,8 +74,7 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     public Map<String, Permission> getUsers() {
-        Transaction tx = graph.beginTx();
-        try {
+        try (Transaction tx = graph.beginTx()) {
             final Map<String, Permission> result = new HashMap<String, Permission>();
 
             PropertyContainer properties = getGraphProperties();
@@ -88,8 +87,6 @@ public class MultipleAuthenticationService implements AuthenticationService {
             }
             tx.success();
             return result;
-        } finally {
-            tx.finish();
         }
     }
 
@@ -103,8 +100,7 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     public void setPermissionForUser(String user, Permission permission) {
-        Transaction transaction = graph.beginTx();
-        try {
+        try (Transaction transaction = graph.beginTx()) {
             PropertyContainer properties = getGraphProperties();
             String key = getUserKey(user);
             if (permission == Permission.NONE) {
@@ -113,10 +109,6 @@ public class MultipleAuthenticationService implements AuthenticationService {
                 properties.setProperty(key, permission.name());
             }
             transaction.success();
-        } catch (Exception e) {
-            transaction.failure();
-        } finally {
-            transaction.finish();
         }
     }
 
