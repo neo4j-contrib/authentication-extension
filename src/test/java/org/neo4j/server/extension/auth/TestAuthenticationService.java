@@ -23,6 +23,8 @@ import org.junit.Before;
 import org.junit.Test;
 import org.neo4j.graphdb.PropertyContainer;
 import org.neo4j.graphdb.Transaction;
+import org.neo4j.kernel.impl.core.GraphProperties;
+import org.neo4j.kernel.impl.core.NodeManager;
 import org.neo4j.test.ImpermanentGraphDatabase;
 
 import static org.junit.Assert.assertEquals;
@@ -47,7 +49,8 @@ public class TestAuthenticationService {
     @Test public void testUserAddRemove() {
         service.setPermissionForUser("user1", RO);
 
-        PropertyContainer properties = graphDatabase.getNodeManager().getGraphProperties();
+        NodeManager nodeManager = graphDatabase.getDependencyResolver().resolveDependency(NodeManager.class);
+        PropertyContainer properties = nodeManager.getGraphProperties();
         Transaction transaction = graphDatabase.beginTx();
         properties.setProperty("any other property", "should be ignored");
         transaction.success();

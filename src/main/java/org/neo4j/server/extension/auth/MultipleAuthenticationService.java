@@ -56,7 +56,9 @@ public class MultipleAuthenticationService implements AuthenticationService {
         Transaction tx = graph.beginTx();
         try {
             PropertyContainer properties = getGraphProperties();
-            String credentials = (String) properties.getProperty(getUserKey(cred), "");
+            String userKey = getUserKey(cred);
+            Object result = properties.getProperty(userKey, "");
+            String credentials = (result instanceof Boolean) ? "" : (String) result;
             tx.success();
             return credentials;
         } finally {
