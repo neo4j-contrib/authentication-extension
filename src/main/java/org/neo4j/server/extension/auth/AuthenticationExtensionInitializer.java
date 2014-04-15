@@ -27,10 +27,11 @@ import org.neo4j.server.NeoServer;
 import org.neo4j.server.configuration.Configurator;
 import org.neo4j.server.configuration.ThirdPartyJaxRsPackage;
 import org.neo4j.server.database.Database;
-import org.neo4j.server.logging.Logger;
 import org.neo4j.server.plugins.Injectable;
 import org.neo4j.server.plugins.SPIPluginLifecycle;
 import org.neo4j.server.web.WebServer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.util.Arrays;
 import java.util.Collection;
@@ -38,7 +39,7 @@ import java.util.Collection;
 import static org.neo4j.server.extension.auth.TypedInjectable.injectable;
 
 public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
-    private static final Logger LOG = new Logger(AuthenticationExtensionInitializer.class);
+    private static final Logger LOG = LoggerFactory.getLogger(AuthenticationExtensionInitializer.class);
     private AuthenticationFilter adminAuthenticationFilter;
     private AuthenticationFilter authenticationFilter;
     private WebServer webServer;
@@ -61,7 +62,7 @@ public class AuthenticationExtensionInitializer implements SPIPluginLifecycle {
 
     @Override
     public Collection<Injectable<?>> start(final NeoServer neoServer) {
-        LOG.info("START " + AuthenticationExtensionInitializer.class.toString());
+        if (LOG.isInfoEnabled()) LOG.info("START " + AuthenticationExtensionInitializer.class.toString());
 
         webServer = getWebServer(neoServer);
         final Configurator configurator = neoServer.getConfigurator();
