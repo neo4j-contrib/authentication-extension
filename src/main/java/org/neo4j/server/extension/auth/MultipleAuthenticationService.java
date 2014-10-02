@@ -37,7 +37,7 @@ import java.util.regex.Pattern;
 public class MultipleAuthenticationService implements AuthenticationService {
 
     private static final String CONFIG_PREFIX = MultipleAuthenticationService.class.getPackage().getName();
-    private static final Pattern USER_PATTERN = Pattern.compile(CONFIG_PREFIX + "\\.user\\.(.+)");
+    private static final Pattern USER_PATTERN = Pattern.compile(CONFIG_PREFIX + "\\.user\\.(.+?)(:.+)?");
     private final GraphDatabaseAPI graph;
 
     public MultipleAuthenticationService(GraphDatabaseAPI graph) {
@@ -76,8 +76,7 @@ public class MultipleAuthenticationService implements AuthenticationService {
     }
 
     public Map<String, Permission> getUsers() {
-        Transaction tx = graph.beginTx();
-        try {
+        try (Transaction tx = graph.beginTx()) {
             final Map<String, Permission> result = new HashMap<String, Permission>();
 
             PropertyContainer properties = getGraphProperties();
@@ -90,8 +89,6 @@ public class MultipleAuthenticationService implements AuthenticationService {
             }
             tx.success();
             return result;
-        } finally {
-            tx.finish();
         }
     }
 

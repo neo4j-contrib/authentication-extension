@@ -104,7 +104,7 @@ public class TestAuthentification {
         response = adminClient.resource("http://localhost:7474/admin/list").accept(MediaType.APPLICATION_JSON_TYPE).get(ClientResponse.class);
         assertEquals(200, response.getStatus());
         final String content = response.getEntity(String.class);
-        assertEquals("{\"test-ro:pass\":\"RO\",\"test-rw:pass\":\"RW\"}", content);
+        assertEquals("{\"test-ro\":\"RO\",\"test-rw\":\"RW\"}", content);
     }
 
     @Test public void expecting401() throws IOException, InterruptedException {
